@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCategories } from '@/composables/useCategories'
 import CategoryForm from '@/components/CategoryForm.vue'
@@ -9,10 +9,21 @@ const router = useRouter()
 const {
   needCategories,
   wishCategories,
+  categoryList,
   addCategory,
   updateCategory,
   removeCategory,
+  initDefaultCategories,
 } = useCategories()
+
+// Seed defaults if none exist yet (e.g. for families created before this feature)
+onMounted(() => {
+  setTimeout(() => {
+    if (categoryList.value.length === 0) {
+      initDefaultCategories()
+    }
+  }, 1000)
+})
 
 const showForm = ref(false)
 const editingCategory = ref<Category | undefined>(undefined)

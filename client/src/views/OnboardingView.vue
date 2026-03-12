@@ -2,9 +2,11 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFamily } from '@/composables/useFamily'
+import { useCategories } from '@/composables/useCategories'
 
 const router = useRouter()
 const { createFamily, joinFamily, addMember } = useFamily()
+const { initDefaultCategories } = useCategories()
 
 const step = ref(1)
 const mode = ref<'create' | 'join' | null>(null)
@@ -38,6 +40,8 @@ async function handleFamilyStep(): Promise<void> {
   try {
     if (mode.value === 'create') {
       await createFamily(familyName.value)
+      // Seed default categories for new family
+      setTimeout(() => initDefaultCategories(), 500)
     } else if (mode.value === 'join') {
       await joinFamily(joinId.value)
     }

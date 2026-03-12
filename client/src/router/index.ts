@@ -7,6 +7,7 @@ import SettingsView from '@/views/SettingsView.vue'
 import CategoriesView from '@/views/CategoriesView.vue'
 import AssistantView from '@/views/AssistantView.vue'
 import FinanceView from '@/views/FinanceView.vue'
+import SubscriptionView from '@/views/SubscriptionView.vue'
 import LoginView from '@/views/LoginView.vue'
 import OnboardingView from '@/views/OnboardingView.vue'
 import { useAuth } from '@/composables/useAuth'
@@ -66,6 +67,11 @@ const router = createRouter({
       name: 'finance',
       component: FinanceView,
     },
+    {
+      path: '/subscription',
+      name: 'subscription',
+      component: SubscriptionView,
+    },
   ],
 })
 
@@ -73,13 +79,11 @@ router.beforeEach((to, _from, next) => {
   const { isAuthenticated, isLoading } = useAuth()
   const { familyId } = useFamily()
 
-  // While auth is still loading, allow navigation
   if (isLoading.value) {
     next()
     return
   }
 
-  // Not authenticated -> redirect to login (unless already going there)
   if (!isAuthenticated.value) {
     if (to.meta.public) {
       next()
@@ -89,13 +93,11 @@ router.beforeEach((to, _from, next) => {
     return
   }
 
-  // Authenticated but no family -> redirect to onboarding
   if (!familyId.value && to.name !== 'onboarding') {
     next({ name: 'onboarding' })
     return
   }
 
-  // Authenticated with family trying to go to login -> redirect home
   if (to.name === 'login') {
     next({ name: 'calendar' })
     return

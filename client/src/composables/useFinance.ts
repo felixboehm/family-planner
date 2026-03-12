@@ -3,40 +3,47 @@ import gun from '@/lib/gun'
 import type { IncomeProfile, FixedCost, CareExpense, FinanceSummary } from '@/types/finance'
 import { useFamily } from './useFamily'
 import { calculateFinanceSummary } from '@/lib/financeCalc'
+import { encryptWithFamilyKey, decryptWithFamilyKey } from '@/lib/sea'
 
 const incomes = ref<Record<string, IncomeProfile>>({})
 const fixedCosts = ref<Record<string, FixedCost>>({})
 const careExpenses = ref<Record<string, CareExpense>>({})
-let subscribedFamilyId: string | null = null
+let subscribedFamilyPub: string | null = null
 
-function subscribeToFinance(fId: string): void {
-  if (subscribedFamilyId === fId) return
-  subscribedFamilyId = fId
+function subscribeToFinance(fPub: string, familyPair: any): void {
+  if (subscribedFamilyPub === fPub) return
+  subscribedFamilyPub = fPub
 
-  const financeNode = gun.get('families').get(fId).get('finance')
+  const financeNode = gun.user(fPub).get('finance')
 
   // Subscribe to incomes
   financeNode
     .get('incomes')
     .map()
-    .on((data: any, key: string) => {
+    .on(async (data: any, key: string) => {
       if (data === null || data === undefined) {
         const updated = { ...incomes.value }
         delete updated[key]
         incomes.value = updated
         return
       }
-      if (typeof data === 'object') {
+      // Decrypt if encrypted
+      let record = data
+      if (typeof data === 'string' && familyPair) {
+        const decrypted = await decryptWithFamilyKey(data, familyPair)
+        if (decrypted) record = decrypted
+      }
+      if (typeof record === 'object') {
         incomes.value = {
           ...incomes.value,
           [key]: {
             id: key,
-            memberId: data.memberId ?? '',
-            hourlyRate: Number(data.hourlyRate) || 0,
-            hoursPerWeek: Number(data.hoursPerWeek) || 0,
-            taxRate: Number(data.taxRate) || 0,
-            type: data.type ?? 'employed',
-            createdAt: data.createdAt ?? 0,
+            memberId: record.memberId ?? '',
+            hourlyRate: Number(record.hourlyRate) || 0,
+            hoursPerWeek: Number(record.hoursPerWeek) || 0,
+            taxRate: Number(record.taxRate) || 0,
+            type: record.type ?? 'employed',
+            createdAt: record.createdAt ?? 0,
           },
         }
       }
@@ -46,22 +53,27 @@ function subscribeToFinance(fId: string): void {
   financeNode
     .get('fixedCosts')
     .map()
-    .on((data: any, key: string) => {
+    .on(async (data: any, key: string) => {
       if (data === null || data === undefined) {
         const updated = { ...fixedCosts.value }
         delete updated[key]
         fixedCosts.value = updated
         return
       }
-      if (typeof data === 'object') {
+      let record = data
+      if (typeof data === 'string' && familyPair) {
+        const decrypted = await decryptWithFamilyKey(data, familyPair)
+        if (decrypted) record = decrypted
+      }
+      if (typeof record === 'object') {
         fixedCosts.value = {
           ...fixedCosts.value,
           [key]: {
             id: key,
-            name: data.name ?? '',
-            amount: Number(data.amount) || 0,
-            category: data.category ?? 'other',
-            createdAt: data.createdAt ?? 0,
+            name: record.name ?? '',
+            amount: Number(record.amount) || 0,
+            category: record.category ?? 'other',
+            createdAt: record.createdAt ?? 0,
           },
         }
       }
@@ -71,23 +83,28 @@ function subscribeToFinance(fId: string): void {
   financeNode
     .get('careExpenses')
     .map()
-    .on((data: any, key: string) => {
+    .on(async (data: any, key: string) => {
       if (data === null || data === undefined) {
         const updated = { ...careExpenses.value }
         delete updated[key]
         careExpenses.value = updated
         return
       }
-      if (typeof data === 'object') {
+      let record = data
+      if (typeof data === 'string' && familyPair) {
+        const decrypted = await decryptWithFamilyKey(data, familyPair)
+        if (decrypted) record = decrypted
+      }
+      if (typeof record === 'object') {
         careExpenses.value = {
           ...careExpenses.value,
           [key]: {
             id: key,
-            childId: data.childId ?? '',
-            provider: data.provider ?? '',
-            monthlyCost: Number(data.monthlyCost) || 0,
-            hoursPerWeek: Number(data.hoursPerWeek) || 0,
-            createdAt: data.createdAt ?? 0,
+            childId: record.childId ?? '',
+            provider: record.provider ?? '',
+            monthlyCost: Number(record.monthlyCost) || 0,
+            hoursPerWeek: Number(record.hoursPerWeek) || 0,
+            createdAt: record.createdAt ?? 0,
           },
         }
       }
@@ -95,18 +112,18 @@ function subscribeToFinance(fId: string): void {
 }
 
 export function useFinance() {
-  const { familyId } = useFamily()
+  const { familyPub, familyPair, familyCert } = useFamily()
 
   watch(
-    familyId,
-    (newId) => {
-      if (newId) {
-        subscribeToFinance(newId)
+    familyPub,
+    (newPub) => {
+      if (newPub) {
+        subscribeToFinance(newPub, familyPair.value)
       } else {
         incomes.value = {}
         fixedCosts.value = {}
         careExpenses.value = {}
-        subscribedFamilyId = null
+        subscribedFamilyPub = null
       }
     },
     { immediate: true },
@@ -122,149 +139,161 @@ export function useFinance() {
 
   // --- Income CRUD ---
 
-  function addIncome(data: Omit<IncomeProfile, 'id' | 'createdAt'>): string {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+  async function addIncome(data: Omit<IncomeProfile, 'id' | 'createdAt'>): Promise<string> {
+    if (!familyPub.value || !familyCert.value || !familyPair.value) throw new Error('Keine Familie ausgewaehlt')
 
     const id = `income-${crypto.randomUUID()}`
     const now = Date.now()
+    const cert = familyCert.value
+
+    const record = { ...data, createdAt: now }
+    const encrypted = await encryptWithFamilyKey(record, familyPair.value)
 
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('finance')
       .get('incomes')
       .get(id)
-      .put({
-        memberId: data.memberId,
-        hourlyRate: data.hourlyRate,
-        hoursPerWeek: data.hoursPerWeek,
-        taxRate: data.taxRate,
-        type: data.type,
-        createdAt: now,
-      } as any)
+      .put(encrypted as any, null, { opt: { cert } } as any)
 
     return id
   }
 
-  function updateIncome(id: string, data: Partial<Omit<IncomeProfile, 'id'>>): void {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+  async function updateIncome(id: string, data: Partial<Omit<IncomeProfile, 'id'>>): Promise<void> {
+    if (!familyPub.value || !familyCert.value || !familyPair.value) throw new Error('Keine Familie ausgewaehlt')
+
+    const existing = incomes.value[id]
+    if (!existing) return
+
+    const cert = familyCert.value
+    const merged = { ...existing, ...data }
+    const encrypted = await encryptWithFamilyKey(merged, familyPair.value)
 
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('finance')
       .get('incomes')
       .get(id)
-      .put(data as any)
+      .put(encrypted as any, null, { opt: { cert } } as any)
   }
 
   function removeIncome(id: string): void {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+    if (!familyPub.value || !familyCert.value) throw new Error('Keine Familie ausgewaehlt')
+
+    const cert = familyCert.value
 
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('finance')
       .get('incomes')
       .get(id)
-      .put(null as any)
+      .put(null as any, null, { opt: { cert } } as any)
   }
 
   // --- Fixed Cost CRUD ---
 
-  function addFixedCost(data: Omit<FixedCost, 'id' | 'createdAt'>): string {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+  async function addFixedCost(data: Omit<FixedCost, 'id' | 'createdAt'>): Promise<string> {
+    if (!familyPub.value || !familyCert.value || !familyPair.value) throw new Error('Keine Familie ausgewaehlt')
 
     const id = `cost-${crypto.randomUUID()}`
     const now = Date.now()
+    const cert = familyCert.value
+
+    const record = { ...data, createdAt: now }
+    const encrypted = await encryptWithFamilyKey(record, familyPair.value)
 
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('finance')
       .get('fixedCosts')
       .get(id)
-      .put({
-        name: data.name,
-        amount: data.amount,
-        category: data.category,
-        createdAt: now,
-      } as any)
+      .put(encrypted as any, null, { opt: { cert } } as any)
 
     return id
   }
 
-  function updateFixedCost(id: string, data: Partial<Omit<FixedCost, 'id'>>): void {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+  async function updateFixedCost(id: string, data: Partial<Omit<FixedCost, 'id'>>): Promise<void> {
+    if (!familyPub.value || !familyCert.value || !familyPair.value) throw new Error('Keine Familie ausgewaehlt')
+
+    const existing = fixedCosts.value[id]
+    if (!existing) return
+
+    const cert = familyCert.value
+    const merged = { ...existing, ...data }
+    const encrypted = await encryptWithFamilyKey(merged, familyPair.value)
 
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('finance')
       .get('fixedCosts')
       .get(id)
-      .put(data as any)
+      .put(encrypted as any, null, { opt: { cert } } as any)
   }
 
   function removeFixedCost(id: string): void {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+    if (!familyPub.value || !familyCert.value) throw new Error('Keine Familie ausgewaehlt')
+
+    const cert = familyCert.value
 
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('finance')
       .get('fixedCosts')
       .get(id)
-      .put(null as any)
+      .put(null as any, null, { opt: { cert } } as any)
   }
 
   // --- Care Expense CRUD ---
 
-  function addCareExpense(data: Omit<CareExpense, 'id' | 'createdAt'>): string {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+  async function addCareExpense(data: Omit<CareExpense, 'id' | 'createdAt'>): Promise<string> {
+    if (!familyPub.value || !familyCert.value || !familyPair.value) throw new Error('Keine Familie ausgewaehlt')
 
     const id = `care-${crypto.randomUUID()}`
     const now = Date.now()
+    const cert = familyCert.value
+
+    const record = { ...data, createdAt: now }
+    const encrypted = await encryptWithFamilyKey(record, familyPair.value)
 
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('finance')
       .get('careExpenses')
       .get(id)
-      .put({
-        childId: data.childId,
-        provider: data.provider,
-        monthlyCost: data.monthlyCost,
-        hoursPerWeek: data.hoursPerWeek,
-        createdAt: now,
-      } as any)
+      .put(encrypted as any, null, { opt: { cert } } as any)
 
     return id
   }
 
-  function updateCareExpense(id: string, data: Partial<Omit<CareExpense, 'id'>>): void {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+  async function updateCareExpense(id: string, data: Partial<Omit<CareExpense, 'id'>>): Promise<void> {
+    if (!familyPub.value || !familyCert.value || !familyPair.value) throw new Error('Keine Familie ausgewaehlt')
+
+    const existing = careExpenses.value[id]
+    if (!existing) return
+
+    const cert = familyCert.value
+    const merged = { ...existing, ...data }
+    const encrypted = await encryptWithFamilyKey(merged, familyPair.value)
 
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('finance')
       .get('careExpenses')
       .get(id)
-      .put(data as any)
+      .put(encrypted as any, null, { opt: { cert } } as any)
   }
 
   function removeCareExpense(id: string): void {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+    if (!familyPub.value || !familyCert.value) throw new Error('Keine Familie ausgewaehlt')
+
+    const cert = familyCert.value
 
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('finance')
       .get('careExpenses')
       .get(id)
-      .put(null as any)
+      .put(null as any, null, { opt: { cert } } as any)
   }
 
   return {

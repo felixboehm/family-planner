@@ -12,7 +12,8 @@ interface Comment {
 
 const props = defineProps<{
   entityId: string
-  familyId: string
+  familyPub: string
+  familyCert: string
   currentMemberId: string
   members: Record<string, Member>
 }>()
@@ -29,11 +30,10 @@ watch(
   () => props.entityId,
   (entityId) => {
     comments.value = {}
-    if (!entityId || !props.familyId) return
+    if (!entityId || !props.familyPub) return
 
     gun
-      .get('families')
-      .get(props.familyId)
+      .user(props.familyPub)
       .get('comments')
       .get(entityId)
       .map()
@@ -80,14 +80,14 @@ function formatTime(timestamp: number): string {
 
 function sendComment() {
   const text = newText.value.trim()
-  if (!text || !props.familyId || !props.entityId) return
+  if (!text || !props.familyPub || !props.familyCert || !props.entityId) return
 
   const id = `cmt-${crypto.randomUUID()}`
   const now = Date.now()
+  const cert = props.familyCert
 
   gun
-    .get('families')
-    .get(props.familyId)
+    .user(props.familyPub)
     .get('comments')
     .get(props.entityId)
     .get(id)
@@ -95,7 +95,7 @@ function sendComment() {
       memberId: props.currentMemberId,
       text,
       createdAt: now,
-    } as any)
+    } as any, null, { opt: { cert } } as any)
 
   newText.value = ''
 }

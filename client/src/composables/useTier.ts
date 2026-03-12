@@ -12,15 +12,14 @@ import {
 
 const tier = ref<Tier>('free')
 
-let subscribedFamilyId: string | null = null
+let subscribedFamilyPub: string | null = null
 
-function subscribeToTier(familyId: string): void {
-  if (subscribedFamilyId === familyId) return
-  subscribedFamilyId = familyId
+function subscribeToTier(fPub: string): void {
+  if (subscribedFamilyPub === fPub) return
+  subscribedFamilyPub = fPub
 
   gun
-    .get('families')
-    .get(familyId)
+    .user(fPub)
     .get('subscription')
     .get('tier')
     .on((data: any) => {
@@ -33,17 +32,17 @@ function subscribeToTier(familyId: string): void {
 }
 
 export function useTier() {
-  const { familyId, members } = useFamily()
+  const { familyPub, familyCert, members } = useFamily()
 
-  // Watch familyId and subscribe to tier changes
+  // Watch familyPub and subscribe to tier changes
   watch(
-    familyId,
-    (id) => {
-      if (id) {
-        subscribeToTier(id)
+    familyPub,
+    (pub) => {
+      if (pub) {
+        subscribeToTier(pub)
       } else {
         tier.value = 'free'
-        subscribedFamilyId = null
+        subscribedFamilyPub = null
       }
     },
     { immediate: true },
@@ -62,13 +61,15 @@ export function useTier() {
   const canAddChild = computed(() => checkCanAddChild(tier.value, 0)) // child count tracked separately if needed
 
   async function setTier(newTier: Tier): Promise<void> {
-    if (!familyId.value) return
+    if (!familyPub.value || !familyCert.value) return
+
+    const cert = familyCert.value
+
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('subscription')
       .get('tier')
-      .put(newTier)
+      .put(newTier as any, null, { opt: { cert } } as any)
     tier.value = newTier
   }
 

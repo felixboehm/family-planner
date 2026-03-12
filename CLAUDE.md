@@ -1,0 +1,46 @@
+# Family-Planner
+
+Kollaborativer Familienplaner – Betreuung, Haushalt und persönliche Zeit fair organisiert.
+
+## Projektstruktur
+
+```
+docs/           Dokumentation, Strategie, Technik
+  vision.md       Vision, Mission, Werte
+  techstack.md    Tech Stack, GunDB-Struktur, Relay-Server
+  architecture.md ADR: Eigener Relay-Server
+  monetization.md Pricing-Tiers
+  competition.md  Wettbewerbsvergleich
+specs/          Feature-Spezifikationen (spec-driven development)
+  principles.md       Leitprinzip Bedürfnis vs. Wunsch, Zielgruppe
+  categories.md       Kategorien-System (Standard + eigene)
+  family-calendar.md  Terminverwaltung, Familienplan, Konflikterkennung
+  childcare.md        Kind-Profil, Betreuungsslots, Lückenerkennung
+  collaboration.md    Echtzeit-Kollaboration, Tausch-Requests
+  fairness-score.md   Auswertung, Metriken, Fairness-Score
+  finance.md          Finanzmodul, Szenarien
+  ical-feed.md        iCal Export + Live-Feed
+  push-notifications.md  Web Push
+  ai-assistant.md     KI-Vorschlagsmodus
+```
+
+## Tech Stack
+
+- **Frontend:** Vue.js 3 (Composition API), Tailwind CSS, Vite PWA
+- **Daten:** GunDB als einzige State-Quelle (kein Pinia/Vuex), GunDB SEA für E2E-Verschlüsselung
+- **Server:** TypeScript GunDB Relay mit API-Endpunkten (iCal, Push, KI-Assistent)
+- **KI:** Claude API via Relay-Server
+
+## Architektur-Prinzipien
+
+- GunDB ist Single Source of Truth – Vue-Komponenten subscriben direkt auf GunDB-Nodes
+- Der Relay-Server ist zustandslos – alle Daten fließen durch GunDB
+- Offline-first: App funktioniert ohne Verbindung, sync bei Reconnect
+- Ende-zu-Ende verschlüsselt: Server sieht nur verschlüsselte Daten (Ausnahme: explizit geteilte Nodes für iCal/Push)
+
+## Konventionen
+
+- Sprache: Deutsch für Docs und Specs, Englisch für Code und Commit-Messages
+- Commits folgen Semantic Commit Messages (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`)
+- Jedes Feature hat eine eigene Spec in `specs/` bevor die Implementierung beginnt
+- Neue Architektur-Entscheidungen werden als ADR in `docs/` dokumentiert

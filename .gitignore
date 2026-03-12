@@ -10,9 +10,11 @@ build/
 .env.local
 .env.*.local
 
-# GunDB data
-data/
-radata/
+# GunDB data (server root only)
+/data/
+/radata/
+server/data/
+server/radata/
 
 # Editor files
 .vscode/

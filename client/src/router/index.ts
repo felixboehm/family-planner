@@ -3,6 +3,7 @@ import CalendarView from '@/views/CalendarView.vue'
 import ChildcareView from '@/views/ChildcareView.vue'
 import FairnessView from '@/views/FairnessView.vue'
 import SettingsView from '@/views/SettingsView.vue'
+import CategoriesView from '@/views/CategoriesView.vue'
 import LoginView from '@/views/LoginView.vue'
 import OnboardingView from '@/views/OnboardingView.vue'
 import { useAuth } from '@/composables/useAuth'
@@ -41,6 +42,11 @@ const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: SettingsView,
+    },
+    {
+      path: '/categories',
+      name: 'categories',
+      component: CategoriesView,
     },
   ],
 })

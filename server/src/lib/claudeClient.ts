@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { execFile } from 'child_process'
 
 const SYSTEM_PROMPT = `Du bist ein freundlicher und unterstuetzender Familienplanungs-Assistent.
 Du hilfst Familien dabei, ihren Wochenplan fair und ausgeglichen zu gestalten.
@@ -13,45 +13,32 @@ Wichtige Regeln:
 - Wenn du Luecken in der Betreuung oder Ungleichheiten erkennst, weise freundlich darauf hin.
 - Beziehe dich konkret auf die Daten im Familienplan, die dir als Kontext uebergeben werden.`
 
-let client: Anthropic | null = null
-
-function getClient(): Anthropic {
-  if (!client) {
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY ist nicht konfiguriert')
-    }
-    client = new Anthropic({ apiKey })
-  }
-  return client
-}
-
 /**
- * Create an assistant response using Claude API.
+ * Create an assistant response using `claude -p` CLI.
  */
 export async function createAssistantResponse(
   planContext: string,
   userMessage: string,
 ): Promise<string> {
-  const anthropic = getClient()
+  const prompt = `${SYSTEM_PROMPT}\n\nHier ist der aktuelle Familienplan:\n\n${planContext}\n\n---\n\nFrage/Anliegen: ${userMessage}`
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 1024,
-    system: SYSTEM_PROMPT,
-    messages: [
-      {
-        role: 'user',
-        content: `Hier ist der aktuelle Familienplan:\n\n${planContext}\n\n---\n\nFrage/Anliegen: ${userMessage}`,
+  return new Promise((resolve, reject) => {
+    const child = execFile(
+      'claude',
+      ['-p', prompt],
+      { maxBuffer: 1024 * 1024, timeout: 60000 },
+      (error, stdout, stderr) => {
+        if (error) {
+          reject(new Error(`claude CLI error: ${error.message}`))
+          return
+        }
+        const response = stdout.trim()
+        if (!response) {
+          reject(new Error('Empty response from claude CLI'))
+          return
+        }
+        resolve(response)
       },
-    ],
+    )
   })
-
-  // Extract text from response content blocks
-  const textBlocks = response.content.filter((block) => block.type === 'text')
-  if (textBlocks.length === 0) {
-    return 'Entschuldigung, ich konnte keine Antwort generieren.'
-  }
-
-  return textBlocks.map((block) => (block as { type: 'text'; text: string }).text).join('\n')
 }

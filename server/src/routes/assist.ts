@@ -85,9 +85,9 @@ export function createAssistRouter(): Router {
     } catch (err: any) {
       console.error('Assist endpoint error:', err.message || err)
 
-      if (err.message?.includes('ANTHROPIC_API_KEY')) {
+      if (err.message?.includes('claude CLI')) {
         res.status(503).json({
-          error: 'KI-Assistent ist nicht konfiguriert. Bitte ANTHROPIC_API_KEY setzen.',
+          error: 'KI-Assistent nicht verfuegbar. Stelle sicher, dass `claude` CLI installiert ist.',
         })
         return
       }

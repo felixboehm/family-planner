@@ -5,6 +5,7 @@ import FairnessView from '@/views/FairnessView.vue'
 import RequestsView from '@/views/RequestsView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import CategoriesView from '@/views/CategoriesView.vue'
+import SubscriptionView from '@/views/SubscriptionView.vue'
 import LoginView from '@/views/LoginView.vue'
 import OnboardingView from '@/views/OnboardingView.vue'
 import { useAuth } from '@/composables/useAuth'
@@ -53,6 +54,11 @@ const router = createRouter({
       path: '/categories',
       name: 'categories',
       component: CategoriesView,
+    },
+    {
+      path: '/subscription',
+      name: 'subscription',
+      component: SubscriptionView,
     },
   ],
 })

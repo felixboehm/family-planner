@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import NotificationSettings from '@/components/NotificationSettings.vue'
 
 const router = useRouter()
 </script>
@@ -24,9 +25,9 @@ const router = useRouter()
       </button>
     </div>
 
-    <div class="bg-white rounded-lg shadow p-6 text-center text-gray-500 mt-4">
-      <p class="text-4xl mb-3">&#x2699;&#xFE0F;</p>
-      <p>Weitere Einstellungen folgen.</p>
+    <!-- Push notification settings -->
+    <div class="mt-4">
+      <NotificationSettings />
     </div>
   </div>
 </template>

@@ -1,14 +1,8 @@
-import type { IGunInstance } from 'gun'
 import { notifyMember, notifyFamily } from './pushService.js'
 
-/**
- * Set up GunDB listeners that trigger push notifications on data changes.
- *
- * Watches:
- * - families/*/requests – new swap requests (status='pending') notify the target member
- * - families/*/events   – event changes notify all family members
- */
-export function setupGunListeners(gun: IGunInstance<any>): void {
+// Set up GunDB listeners that trigger push notifications on data changes.
+// Watches families requests (new pending swaps) and events (plan changes).
+export function setupGunListeners(gun: any): void {
   console.log('[GunListeners] Setting up push-notification listeners')
 
   // -------------------------------------------------------------------------
@@ -23,7 +17,7 @@ export function setupGunListeners(gun: IGunInstance<any>): void {
       if (!data || typeof data !== 'object') return
       if (data.status !== 'pending') return
 
-      // We need the familyId – extract from the GunDB soul/path
+      // We need the familyId - extract from the GunDB soul/path
       const familyId = extractFamilyId(data)
       if (!familyId) return
 

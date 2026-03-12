@@ -1,4 +1,4 @@
-import type Gun from 'gun'
+// GunDB instance type
 
 const DAYS_ICAL = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'] as const
 

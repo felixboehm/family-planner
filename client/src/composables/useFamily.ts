@@ -3,23 +3,12 @@ import gun from '@/lib/gun'
 import type { Family, Member } from '@/types/family'
 import { useAuth } from './useAuth'
 
-const FAMILY_KEY = 'fp_familyId'
-const MEMBER_KEY = 'fp_memberId'
-
 const family = ref<Family | null>(null)
 const members = ref<Record<string, Member>>({})
-const familyId = ref<string | null>(localStorage.getItem(FAMILY_KEY))
+const familyId = ref<string | null>(null)
+const currentMemberId = ref<string | null>(null)
 
 let subscribedFamilyId: string | null = null
-
-function persistFamilyId(id: string): void {
-  localStorage.setItem(FAMILY_KEY, id)
-  familyId.value = id
-}
-
-function persistMemberId(id: string): void {
-  localStorage.setItem(MEMBER_KEY, id)
-}
 
 function subscribeToFamily(id: string): void {
   if (subscribedFamilyId === id) return
@@ -64,9 +53,21 @@ function subscribeToFamily(id: string): void {
     })
 }
 
-// Restore family subscription from localStorage on load
-if (familyId.value) {
-  subscribeToFamily(familyId.value)
+function loadFromUserSpace(): void {
+  // Read familyId from gun user space
+  gun.user().get('familyId').once((data: any) => {
+    if (data && typeof data === 'string') {
+      familyId.value = data
+      subscribeToFamily(data)
+    }
+  })
+
+  // Read memberId from gun user space
+  gun.user().get('memberId').once((data: any) => {
+    if (data && typeof data === 'string') {
+      currentMemberId.value = data
+    }
+  })
 }
 
 export function useFamily() {
@@ -75,15 +76,14 @@ export function useFamily() {
   watch(
     user,
     (newUser) => {
-      if (newUser && familyId.value) {
-        subscribeToFamily(familyId.value)
-      } else if (!newUser) {
+      if (newUser) {
+        loadFromUserSpace()
+      } else {
         family.value = null
         members.value = {}
         familyId.value = null
+        currentMemberId.value = null
         subscribedFamilyId = null
-        localStorage.removeItem(FAMILY_KEY)
-        localStorage.removeItem(MEMBER_KEY)
       }
     },
     { immediate: true },
@@ -100,7 +100,7 @@ export function useFamily() {
 
     gun.user().get('familyId').put(id)
 
-    persistFamilyId(id)
+    familyId.value = id
     family.value = { id, name, createdAt: now }
     subscribeToFamily(id)
 
@@ -120,7 +120,7 @@ export function useFamily() {
 
           gun.user().get('familyId').put(id)
 
-          persistFamilyId(id)
+          familyId.value = id
           family.value = {
             id,
             name: data.name,
@@ -137,7 +137,12 @@ export function useFamily() {
       throw new Error('Keine Familie ausgewaehlt')
     }
 
-    const existingMemberId = localStorage.getItem(MEMBER_KEY)
+    // Check if user already has a member profile
+    const existingMemberId = await new Promise<string | null>((resolve) => {
+      gun.user().get('memberId').once((data: any) => {
+        resolve(data && typeof data === 'string' ? data : null)
+      })
+    })
 
     if (existingMemberId) {
       gun.get('families').get(familyId.value).get('members').get(existingMemberId).put({
@@ -145,6 +150,7 @@ export function useFamily() {
         color,
         createdAt: Date.now(),
       })
+      currentMemberId.value = existingMemberId
       return existingMemberId
     }
 
@@ -158,7 +164,7 @@ export function useFamily() {
     })
 
     gun.user().get('memberId').put(memberId)
-    persistMemberId(memberId)
+    currentMemberId.value = memberId
 
     return memberId
   }
@@ -167,6 +173,7 @@ export function useFamily() {
     family,
     members,
     familyId,
+    currentMemberId,
     createFamily,
     joinFamily,
     addMember,

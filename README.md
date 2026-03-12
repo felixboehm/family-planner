@@ -34,13 +34,27 @@ Family-Planner hilft Familien, ihren Alltag fair zu organisieren. Jeder Termin w
 - [Vision & Mission](docs/vision.md)
 - [Tech Stack](docs/techstack.md)
 - [Architektur-Entscheidungen](docs/architecture.md)
-- [Produktkonzept](specs/concept.md)
+
+## Spezifikationen
+
+- [Leitprinzipien](specs/principles.md) – Bedürfnis vs. Wunsch, Zielgruppe
+- [Kategorien](specs/categories.md) – Standard- und eigene Kategorien
+- [Familienkalender](specs/family-calendar.md) – Terminverwaltung, Familienplan, Konflikterkennung
+- [Betreuungsplanung](specs/childcare.md) – Kind-Profil, Betreuungsslots, Lückenerkennung
+- [Kollaboration](specs/collaboration.md) – Echtzeit-Bearbeitung, Tausch-Requests
+- [Fairness-Score](specs/fairness-score.md) – Auswertung, Metriken
+- [Finanzmodul](specs/finance.md) – Einkommen, Kosten, Szenarien
+- [iCal-Feed](specs/ical-feed.md) – Export und Live-Abo
+- [Push-Benachrichtigungen](specs/push-notifications.md) – Web Push bei Planänderungen
+- [KI-Assistent](specs/ai-assistant.md) – Vorschlagsmodus
+- [Monetarisierung](specs/monetization.md) – Free / Family / Premium
+- [Differenzierung](specs/competition.md) – Wettbewerbsvergleich
 
 ## Projektstruktur
 
 ```
-docs/           Dokumentation, Vision, Architektur-Entscheidungen
-specs/          Produktkonzept, Spezifikationen
+docs/           Dokumentation, Vision, Tech Stack, Architektur-Entscheidungen
+specs/          Feature-Spezifikationen (spec-driven development)
 ```
 
 ## Lizenz

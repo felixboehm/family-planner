@@ -106,3 +106,42 @@ Der Umbau betrifft alle Composables die GunDB nutzen:
 - **Kein UUID-Sharing** – Einladung per Code/QR
 - **GunDB-nativ** – nutzt SEA wie vorgesehen
 - **Revokable** – Zertifikate können ablaufen oder widerrufen werden
+
+## Migrationsplan
+
+Der Umbau von öffentlichen Pfaden auf SEA User Space erfolgt in 5 aufeinander aufbauenden PRs:
+
+### PR 1: SEA Helpers + Types
+
+- Neue Datei `client/src/lib/sea.ts` mit Hilfsfunktionen für SEA-Operationen (Keypair-Generierung, Verschlüsselung, Zertifikaterstellung)
+- TypeScript-Typen für `FamilyPair`, `Certificate`, `InvitePayload`
+- Unit-Tests für alle SEA-Hilfsfunktionen
+
+### PR 2: `useFamily` Rewrite
+
+- `useFamily` Composable auf `gun.user(familyPub)` umstellen
+- Familie erstellen: SEA-Keypair generieren, User-Space initialisieren, Zertifikat für Ersteller ausstellen
+- Familie laden: verschlüsseltes Keypair aus eigenem User-Space lesen und entschlüsseln
+- Server automatisch als stilles Mitglied hinzufügen
+
+### PR 3: Invite-Flow
+
+- Neue Datei `client/src/composables/useInvite.ts`
+- Einladungscode generieren, Family-Keypair verschlüsselt unter `gun.get('invites').get(code)` ablegen
+- Einladung einlösen: Keypair entschlüsseln, im eigenen User-Space speichern
+- Schreibzertifikat für neues Mitglied erstellen
+- Ablauf nach 24h, Cleanup
+
+### PR 4: Data Composables Migration
+
+- `useEvents`, `useChildren`, `useCategories`, `useRequests`, `useFinance` auf `gun.user(familyPub)` umstellen
+- Alle Schreiboperationen um Zertifikat-Parameter erweitern (`{ opt: { cert } }`)
+- Finance-Daten zusätzlich mit `SEA.encrypt()` / `SEA.decrypt()` verschlüsseln
+- Bestehende Tests anpassen
+
+### PR 5: Server Migration
+
+- Neue Datei `server/src/lib/serverIdentity.ts` – persistentes Server-Keypair generieren und laden
+- iCal-, Push- und KI-Listener auf `gun.user(familyPub)` umstellen
+- Server authentifiziert sich mit eigenem Keypair und nutzt sein Zertifikat für Schreibzugriff
+- Verschlüsselte Daten mit dem Family-Keypair entschlüsseln

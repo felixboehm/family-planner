@@ -8,7 +8,7 @@ Kollaborativer Familienplaner – Betreuung, Haushalt und persönliche Zeit fair
 docs/           Dokumentation, Strategie, Technik
   vision.md       Vision, Mission, Werte
   techstack.md    Tech Stack, GunDB-Struktur, Relay-Server
-  architecture.md ADR: Eigener Relay-Server
+  architecture.md ADR: Eigener Relay-Server, ADR: SEA User Space
   monetization.md Pricing-Tiers
   competition.md  Wettbewerbsvergleich
 specs/          Feature-Spezifikationen (spec-driven development)
@@ -22,12 +22,18 @@ specs/          Feature-Spezifikationen (spec-driven development)
   ical-feed.md        iCal Export + Live-Feed
   push-notifications.md  Web Push
   ai-assistant.md     KI-Vorschlagsmodus
+  gundb-data-model.md GunDB SEA Datenmodell, Sharing, Migrationsplan
+client/src/
+  lib/sea.ts              SEA-Hilfsfunktionen (Keypair, Zertifikate, Verschlüsselung)
+  composables/useInvite.ts  Einladungsflow (Code/QR generieren, einlösen)
+server/src/
+  lib/serverIdentity.ts   Persistentes Server-Keypair für SEA-Integration
 ```
 
 ## Tech Stack
 
 - **Frontend:** Vue.js 3 (Composition API), Tailwind CSS, Vite PWA
-- **Daten:** GunDB als einzige State-Quelle (kein Pinia/Vuex), GunDB SEA für E2E-Verschlüsselung
+- **Daten:** GunDB als einzige State-Quelle (kein Pinia/Vuex), GunDB SEA User Space (Familie = Keypair), Zertifikate für Schreibzugriff, E2E-Verschlüsselung für sensible Daten
 - **Server:** TypeScript GunDB Relay mit API-Endpunkten (iCal, Push, KI-Assistent)
 - **KI:** Claude API via Relay-Server
 

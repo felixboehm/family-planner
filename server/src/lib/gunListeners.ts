@@ -1,30 +1,53 @@
 import { notifyMember, notifyFamily } from './pushService.js'
+import { getServerPub } from './serverIdentity.js'
 
-// Set up GunDB listeners that trigger push notifications on data changes.
-// Watches families requests (new pending swaps) and events (plan changes).
+/**
+ * Set up GunDB listeners that trigger push notifications on data changes.
+ *
+ * With SEA user spaces, we can no longer watch gun.get('families').map() globally.
+ * Instead, the server watches a registration path where clients register families
+ * for the server: gun.get('server-families').get(serverPub).map()
+ *
+ * For each registered familyPub, we set up per-family watchers on
+ * gun.user(familyPub).get('requests') and gun.user(familyPub).get('events').
+ */
 export function setupGunListeners(gun: any): void {
   console.log('[GunListeners] Setting up push-notification listeners')
 
-  // -------------------------------------------------------------------------
-  // Watch swap requests across all families
-  // -------------------------------------------------------------------------
+  const { pub: serverPub } = getServerPub()
+  const watchedFamilies = new Set<string>()
+
+  // Watch for family registrations directed at this server
   gun
-    .get('families')
+    .get('server-families')
+    .get(serverPub)
     .map()
+    .on((data: any, familyPub: string) => {
+      if (!data || !familyPub || watchedFamilies.has(familyPub)) return
+
+      watchedFamilies.add(familyPub)
+      console.log(`[GunListeners] Watching family: ${familyPub.substring(0, 20)}...`)
+
+      setupFamilyListeners(gun, familyPub)
+    })
+
+  console.log('[GunListeners] Listeners active, watching for family registrations')
+}
+
+function setupFamilyListeners(gun: any, familyPub: string): void {
+  // Watch swap requests for this family
+  gun
+    .user(familyPub)
     .get('requests')
     .map()
-    .on((data: any, requestId: string) => {
+    .on((data: any, _requestId: string) => {
       if (!data || typeof data !== 'object') return
       if (data.status !== 'pending') return
-
-      // We need the familyId - extract from the GunDB soul/path
-      const familyId = extractFamilyId(data)
-      if (!familyId) return
 
       const toMemberId: string | undefined = data.toMemberId
       if (!toMemberId) return
 
-      notifyMember(familyId, toMemberId, {
+      notifyMember(familyPub, toMemberId, {
         title: 'Neue Tausch-Anfrage',
         body: data.message || 'Du hast eine neue Tausch-Anfrage erhalten.',
         url: '/plan',
@@ -33,24 +56,18 @@ export function setupGunListeners(gun: any): void {
       })
     })
 
-  // -------------------------------------------------------------------------
-  // Watch events across all families
-  // -------------------------------------------------------------------------
+  // Watch events for this family
   gun
-    .get('families')
-    .map()
+    .user(familyPub)
     .get('events')
     .map()
-    .on((data: any, eventId: string) => {
+    .on((data: any, _eventId: string) => {
       if (!data || typeof data !== 'object') return
-
-      const familyId = extractFamilyId(data)
-      if (!familyId) return
 
       const memberId: string | undefined = data.memberId
 
       notifyFamily(
-        familyId,
+        familyPub,
         {
           title: 'Plan-Aktualisierung',
           body: data.title
@@ -63,18 +80,4 @@ export function setupGunListeners(gun: any): void {
         console.error('[GunListeners] Error notifying family about event:', err)
       })
     })
-
-  console.log('[GunListeners] Listeners active')
-}
-
-/**
- * Attempt to extract the familyId from a GunDB node's soul.
- * GunDB souls typically look like: "families/<familyId>/requests/<requestId>"
- */
-function extractFamilyId(data: any): string | null {
-  const soul: string | undefined = data?._?.['#']
-  if (!soul) return null
-
-  const match = soul.match(/^families\/([^/]+)\//)
-  return match?.[1] ?? null
 }

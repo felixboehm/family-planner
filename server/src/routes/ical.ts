@@ -10,21 +10,21 @@ export function createIcalRouter(gun: any): Router {
   const router = Router()
 
   /**
-   * GET /ical/:familyId/:scope
+   * GET /ical/:familyPub/:scope
    *
    * Query params:
-   *   - token: required auth token (familyId used as simple token for now)
+   *   - token: required auth token
    *   - filterId: optional memberId or childId
    *
    * Returns text/calendar content.
    */
-  router.get('/:familyId/:scope', async (req, res) => {
+  router.get('/:familyPub/:scope', async (req, res) => {
     try {
-      const { familyId, scope } = req.params
+      const { familyPub, scope } = req.params
       const { token, filterId } = req.query
 
-      // Simple token validation: token must match familyId
-      if (!token || token !== familyId) {
+      // Token validation: token must match familyPub
+      if (!token || token !== familyPub) {
         res.status(401).json({ error: 'Unauthorized: invalid or missing token' })
         return
       }
@@ -44,7 +44,7 @@ export function createIcalRouter(gun: any): Router {
 
       const icsContent = await generateFeed(
         gun,
-        familyId,
+        familyPub,
         scope as FeedScope,
         filterId as string | undefined,
       )

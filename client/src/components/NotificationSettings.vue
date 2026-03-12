@@ -9,7 +9,7 @@ import {
   unsubscribeFromPush,
 } from '@/lib/pushSubscription'
 
-const { familyId } = useFamily()
+const { familyPub } = useFamily()
 const { user } = useAuth()
 
 const supported = ref(false)
@@ -30,16 +30,16 @@ onMounted(async () => {
 })
 
 async function togglePush(): Promise<void> {
-  if (!familyId.value || !user.value) return
+  if (!familyPub.value || !user.value) return
 
   loading.value = true
 
   try {
     if (subscribed.value) {
-      const success = await unsubscribeFromPush(familyId.value, user.value.pub)
+      const success = await unsubscribeFromPush(familyPub.value, user.value.pub)
       if (success) subscribed.value = false
     } else {
-      const success = await subscribeToPush(familyId.value, user.value.pub)
+      const success = await subscribeToPush(familyPub.value, user.value.pub)
       if (success) {
         subscribed.value = true
         permissionStatus.value = Notification.permission
@@ -75,7 +75,7 @@ async function togglePush(): Promise<void> {
           </p>
         </div>
         <button
-          :disabled="loading || !familyId"
+          :disabled="loading || !familyPub"
           @click="togglePush"
           class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
           :class="subscribed ? 'bg-blue-500' : 'bg-gray-300'"

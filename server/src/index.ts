@@ -8,6 +8,7 @@ import { initVapid } from './lib/pushService.js'
 import { setupGunListeners } from './lib/gunListeners.js'
 import { createPushRouter } from './routes/push.js'
 import { createAssistRouter } from './routes/assist.js'
+import { initServerIdentity, getServerPub } from './lib/serverIdentity.js'
 
 const app = express()
 const port = Number(process.env.PORT) || 8765
@@ -18,6 +19,16 @@ app.use(express.json())
 // Health check endpoint
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
+// Server public key endpoint (for client to encrypt family keypair for server)
+app.get('/server-pub', (_req, res) => {
+  try {
+    const { pub, epub } = getServerPub()
+    res.json({ pub, epub })
+  } catch {
+    res.status(503).json({ error: 'Server identity not initialized' })
+  }
 })
 
 // Initialize VAPID for web-push
@@ -41,13 +52,24 @@ const gun = Gun({
 // Mount iCal feed router
 app.use('/ical', createIcalRouter(gun))
 
-// Set up GunDB listeners for push notifications
-setupGunListeners(gun)
+// Initialize server identity and set up listeners
+async function start() {
+  await initServerIdentity()
 
-server.listen(port, () => {
-  console.log(`Family-Planner relay server running on port ${port}`)
-  console.log(`Health check: http://localhost:${port}/health`)
-  console.log(`GunDB relay: ws://localhost:${port}/gun`)
+  // Set up GunDB listeners for push notifications
+  setupGunListeners(gun)
+
+  server.listen(port, () => {
+    console.log(`Family-Planner relay server running on port ${port}`)
+    console.log(`Health check: http://localhost:${port}/health`)
+    console.log(`Server pub: http://localhost:${port}/server-pub`)
+    console.log(`GunDB relay: ws://localhost:${port}/gun`)
+  })
+}
+
+start().catch((err) => {
+  console.error('Failed to start server:', err)
+  process.exit(1)
 })
 
 export { app, gun }

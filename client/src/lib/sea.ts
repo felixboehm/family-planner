@@ -62,6 +62,15 @@ export function generateInviteCode(): string {
   return code
 }
 
+export async function encryptForServer(
+  data: any,
+  serverEpub: string,
+  familyPair: FamilyKeypair,
+): Promise<string> {
+  const secret = await SEA.secret(serverEpub, familyPair as any)
+  return await SEA.encrypt(JSON.stringify(data), secret as any)
+}
+
 export async function encryptInvitePayload(
   familyPair: FamilyKeypair,
   code: string,

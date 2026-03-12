@@ -14,7 +14,7 @@ export interface PushPayload {
   url?: string
 }
 
-/** In-memory subscription store keyed by `${familyId}:${memberId}` */
+/** In-memory subscription store keyed by `${familyPub}:${memberId}` */
 const subscriptions = new Map<string, PushSubscriptionData[]>()
 
 /**
@@ -71,11 +71,11 @@ export async function sendPushNotification(
  * Send a push notification to all subscriptions for a given family member.
  */
 export async function notifyMember(
-  familyId: string,
+  familyPub: string,
   memberId: string,
   payload: PushPayload,
 ): Promise<void> {
-  const subs = getSubscriptions(familyId, memberId)
+  const subs = getSubscriptions(familyPub, memberId)
   await Promise.allSettled(subs.map((sub) => sendPushNotification(sub, payload)))
 }
 
@@ -83,15 +83,15 @@ export async function notifyMember(
  * Send a push notification to all members of a family.
  */
 export async function notifyFamily(
-  familyId: string,
+  familyPub: string,
   payload: PushPayload,
   excludeMemberId?: string,
 ): Promise<void> {
   const promises: Promise<boolean>[] = []
 
   for (const [key, subs] of subscriptions.entries()) {
-    if (!key.startsWith(`${familyId}:`)) continue
-    if (excludeMemberId && key === `${familyId}:${excludeMemberId}`) continue
+    if (!key.startsWith(`${familyPub}:`)) continue
+    if (excludeMemberId && key === `${familyPub}:${excludeMemberId}`) continue
 
     for (const sub of subs) {
       promises.push(sendPushNotification(sub, payload))
@@ -106,11 +106,11 @@ export async function notifyFamily(
 // ---------------------------------------------------------------------------
 
 export function addSubscription(
-  familyId: string,
+  familyPub: string,
   memberId: string,
   subscription: PushSubscriptionData,
 ): void {
-  const key = `${familyId}:${memberId}`
+  const key = `${familyPub}:${memberId}`
   const existing = subscriptions.get(key) ?? []
 
   // Avoid duplicates by endpoint
@@ -122,11 +122,11 @@ export function addSubscription(
 }
 
 export function removeSubscription(
-  familyId: string,
+  familyPub: string,
   memberId: string,
   endpoint: string,
 ): boolean {
-  const key = `${familyId}:${memberId}`
+  const key = `${familyPub}:${memberId}`
   const existing = subscriptions.get(key)
   if (!existing) return false
 
@@ -139,8 +139,8 @@ export function removeSubscription(
   return filtered.length < existing.length
 }
 
-export function getSubscriptions(familyId: string, memberId: string): PushSubscriptionData[] {
-  return subscriptions.get(`${familyId}:${memberId}`) ?? []
+export function getSubscriptions(familyPub: string, memberId: string): PushSubscriptionData[] {
+  return subscriptions.get(`${familyPub}:${memberId}`) ?? []
 }
 
 /**

@@ -20,7 +20,7 @@ export async function isPushSubscribed(): Promise<boolean> {
  * Registers the service worker (if not already), requests permission,
  * creates a push subscription and sends it to the server.
  */
-export async function subscribeToPush(familyId: string, memberId: string): Promise<boolean> {
+export async function subscribeToPush(familyPub: string, memberId: string): Promise<boolean> {
   if (!isPushSupported()) {
     console.warn('[Push] Push notifications are not supported in this browser')
     return false
@@ -59,7 +59,7 @@ export async function subscribeToPush(familyId: string, memberId: string): Promi
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        familyId,
+        familyPub,
         memberId,
         subscription: {
           endpoint: subscriptionJSON.endpoint,
@@ -87,7 +87,7 @@ export async function subscribeToPush(familyId: string, memberId: string): Promi
  * Unsubscribe from push notifications.
  * Removes the subscription from the browser and notifies the server.
  */
-export async function unsubscribeFromPush(familyId: string, memberId: string): Promise<boolean> {
+export async function unsubscribeFromPush(familyPub: string, memberId: string): Promise<boolean> {
   if (!isPushSupported()) return false
 
   try {
@@ -101,7 +101,7 @@ export async function unsubscribeFromPush(familyId: string, memberId: string): P
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        familyId,
+        familyPub,
         memberId,
         endpoint: subscription.endpoint,
       }),

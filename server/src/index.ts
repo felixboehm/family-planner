@@ -7,6 +7,7 @@ import { createIcalRouter } from './routes/ical'
 import { initVapid } from './lib/pushService.js'
 import { setupGunListeners } from './lib/gunListeners.js'
 import { createPushRouter } from './routes/push.js'
+import { createAssistRouter } from './routes/assist.js'
 
 const app = express()
 const port = Number(process.env.PORT) || 8765
@@ -24,6 +25,9 @@ initVapid()
 
 // Mount push notification routes
 app.use('/push', createPushRouter())
+
+// AI Assistant route
+app.use(createAssistRouter())
 
 const server = createServer(app)
 

@@ -4,6 +4,7 @@ import type { FamilyEvent } from '@/types/family'
 import { useFamily } from '@/composables/useFamily'
 import { useEvents } from '@/composables/useEvents'
 import { useCategories } from '@/composables/useCategories'
+import { useChildren } from '@/composables/useChildren'
 import WeekCalendar from '@/components/WeekCalendar.vue'
 import EventForm from '@/components/EventForm.vue'
 import gun from '@/lib/gun'
@@ -11,6 +12,40 @@ import gun from '@/lib/gun'
 const { members, familyId } = useFamily()
 const { events, eventList, addEvent, updateEvent, removeEvent } = useEvents()
 const { categories } = useCategories()
+const { children, careSlots } = useChildren()
+
+// Convert care slots assigned to a member into FamilyEvent-like objects for calendar display
+const careSlotEvents = computed<FamilyEvent[]>(() => {
+  const result: FamilyEvent[] = []
+  for (const slot of Object.values(careSlots.value)) {
+    // Only show slots assigned to actual family members (not 'external' or 'both')
+    const memberIds: string[] = []
+    if (slot.assignedTo === 'both') {
+      // Show for all members
+      memberIds.push(...Object.keys(members.value))
+    } else if (slot.assignedTo !== 'external' && members.value[slot.assignedTo]) {
+      memberIds.push(slot.assignedTo)
+    }
+
+    const childName = children.value[slot.childId]?.name ?? 'Kind'
+
+    for (const memberId of memberIds) {
+      result.push({
+        id: `care-${slot.id}-${memberId}`,
+        memberId,
+        title: `\uD83D\uDC76 ${childName}`,
+        categoryId: 'cat-kinderbetreuung',
+        type: 'need',
+        days: slot.days,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        recurrence: slot.recurrence,
+        createdAt: slot.createdAt,
+      })
+    }
+  }
+  return result
+})
 
 // Current user's memberId (stored in user space)
 const currentMemberId = ref<string>('')
@@ -46,13 +81,16 @@ function toggleMemberFilter(id: string) {
   activeMemberIds.value = next
 }
 
+// Merged event list: real events + care slot pseudo-events
+const allEvents = computed(() => [...eventList.value, ...careSlotEvents.value])
+
 // Filtered events based on view mode
 const filteredEvents = computed(() => {
   if (viewMode.value === 'personal') {
-    return eventList.value.filter((e) => e.memberId === currentMemberId.value)
+    return allEvents.value.filter((e) => e.memberId === currentMemberId.value)
   }
   // Family view with member filter
-  return eventList.value.filter((e) => activeMemberIds.value.has(e.memberId))
+  return allEvents.value.filter((e) => activeMemberIds.value.has(e.memberId))
 })
 
 // Modal state
@@ -69,6 +107,8 @@ function openCreateForm(day?: number, time?: string) {
 }
 
 function openEditForm(event: FamilyEvent) {
+  // Care slot pseudo-events are not editable from the calendar
+  if (event.id.startsWith('care-')) return
   editingEvent.value = event
   showForm.value = true
 }

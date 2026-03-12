@@ -3,18 +3,21 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { useFamily } from '@/composables/useFamily'
+import { useRequests } from '@/composables/useRequests'
 
 const router = useRouter()
 const { isAuthenticated, isLoading } = useAuth()
 const { familyId } = useFamily()
+const { pendingCount } = useRequests()
 
 const showNavigation = computed(() => isAuthenticated.value && familyId.value !== null)
 
 const navItems = [
-  { label: 'Kalender', icon: '\u{1F4C5}', path: '/' },
-  { label: 'Betreuung', icon: '\u{1F9D1}\u200D\u{1F37C}', path: '/childcare' },
-  { label: 'Fairness', icon: '\u2696\uFE0F', path: '/fairness' },
-  { label: 'Mehr', icon: '\u2699\uFE0F', path: '/settings' },
+  { label: 'Kalender', icon: '\u{1F4C5}', path: '/', badge: false },
+  { label: 'Betreuung', icon: '\u{1F9D1}\u200D\u{1F37C}', path: '/childcare', badge: false },
+  { label: 'Fairness', icon: '\u2696\uFE0F', path: '/fairness', badge: false },
+  { label: 'Anfragen', icon: '\u{1F504}', path: '/requests', badge: true },
+  { label: 'Mehr', icon: '\u2699\uFE0F', path: '/settings', badge: false },
 ]
 </script>
 
@@ -53,14 +56,22 @@ const navItems = [
           v-for="item in navItems"
           :key="item.path"
           @click="router.push(item.path)"
-          class="flex flex-col items-center py-2 px-3 min-w-0 flex-1 transition-colors"
+          class="flex flex-col items-center py-2 px-3 min-w-0 flex-1 transition-colors relative"
           :class="[
             router.currentRoute.value.path === item.path
               ? 'text-blue-500'
               : 'text-gray-500 hover:text-gray-700',
           ]"
         >
-          <span class="text-xl leading-none">{{ item.icon }}</span>
+          <span class="text-xl leading-none relative">
+            {{ item.icon }}
+            <span
+              v-if="item.badge && pendingCount > 0"
+              class="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"
+            >
+              {{ pendingCount > 99 ? '99+' : pendingCount }}
+            </span>
+          </span>
           <span class="text-xs mt-1 truncate">{{ item.label }}</span>
         </button>
       </div>

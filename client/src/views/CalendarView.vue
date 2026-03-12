@@ -5,14 +5,17 @@ import { useFamily } from '@/composables/useFamily'
 import { useEvents } from '@/composables/useEvents'
 import { useCategories } from '@/composables/useCategories'
 import { useChildren } from '@/composables/useChildren'
+import { useRequests } from '@/composables/useRequests'
 import WeekCalendar from '@/components/WeekCalendar.vue'
 import EventForm from '@/components/EventForm.vue'
+import SwapRequestForm from '@/components/SwapRequestForm.vue'
 import gun from '@/lib/gun'
 
 const { members, familyId } = useFamily()
 const { events, eventList, addEvent, updateEvent, removeEvent } = useEvents()
 const { categories } = useCategories()
 const { children, careSlots } = useChildren()
+const { createRequest } = useRequests()
 
 // Convert care slots assigned to a member into FamilyEvent-like objects for calendar display
 const careSlotEvents = computed<FamilyEvent[]>(() => {
@@ -136,6 +139,26 @@ function handleCancel() {
   editingEvent.value = undefined
 }
 
+// Swap request modal
+const showSwapForm = ref(false)
+const swapTargetEvent = ref<FamilyEvent | undefined>(undefined)
+
+function openSwapRequest(event: FamilyEvent) {
+  swapTargetEvent.value = event
+  showSwapForm.value = true
+}
+
+function handleSwapSend(data: { toMemberId: string; eventId?: string; message: string }) {
+  createRequest({
+    fromMemberId: currentMemberId.value,
+    toMemberId: data.toMemberId,
+    eventId: data.eventId,
+    message: data.message,
+  })
+  showSwapForm.value = false
+  swapTargetEvent.value = undefined
+}
+
 // Build a prefilled event for the form when creating from a slot click
 const formEvent = computed<FamilyEvent | undefined>(() => {
   if (editingEvent.value) return editingEvent.value
@@ -255,13 +278,22 @@ const formEvent = computed<FamilyEvent | undefined>(() => {
             <h3 class="text-lg font-bold text-gray-800">
               {{ editingEvent ? 'Termin bearbeiten' : 'Neuer Termin' }}
             </h3>
-            <button
-              v-if="editingEvent"
-              @click="handleDelete"
-              class="text-red-500 text-sm font-medium hover:text-red-600"
-            >
-              Löschen
-            </button>
+            <div class="flex items-center gap-3">
+              <button
+                v-if="editingEvent && editingEvent.memberId !== currentMemberId && viewMode === 'family'"
+                @click="showForm = false; openSwapRequest(editingEvent)"
+                class="text-blue-500 text-sm font-medium hover:text-blue-600"
+              >
+                Tausch anfragen
+              </button>
+              <button
+                v-if="editingEvent"
+                @click="handleDelete"
+                class="text-red-500 text-sm font-medium hover:text-red-600"
+              >
+                Löschen
+              </button>
+            </div>
           </div>
 
           <EventForm
@@ -269,6 +301,31 @@ const formEvent = computed<FamilyEvent | undefined>(() => {
             :member-id="currentMemberId"
             @save="handleSave"
             @cancel="handleCancel"
+          />
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Swap Request Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showSwapForm"
+        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      >
+        <div
+          class="absolute inset-0 bg-black/40"
+          @click="showSwapForm = false"
+        ></div>
+        <div class="relative w-full sm:max-w-lg bg-white rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto p-5 z-10">
+          <h3 class="text-lg font-bold text-gray-800 mb-4">Tausch anfragen</h3>
+          <SwapRequestForm
+            :members="members"
+            :events="eventList"
+            :current-member-id="currentMemberId"
+            :prefill-to-member-id="swapTargetEvent?.memberId"
+            :prefill-event-id="swapTargetEvent?.id"
+            @send="handleSwapSend"
+            @cancel="showSwapForm = false"
           />
         </div>
       </div>

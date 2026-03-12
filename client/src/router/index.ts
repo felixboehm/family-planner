@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import CalendarView from '@/views/CalendarView.vue'
 import ChildcareView from '@/views/ChildcareView.vue'
 import FairnessView from '@/views/FairnessView.vue'
+import RequestsView from '@/views/RequestsView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import CategoriesView from '@/views/CategoriesView.vue'
 import LoginView from '@/views/LoginView.vue'
@@ -37,6 +38,11 @@ const router = createRouter({
       path: '/fairness',
       name: 'fairness',
       component: FairnessView,
+    },
+    {
+      path: '/requests',
+      name: 'requests',
+      component: RequestsView,
     },
     {
       path: '/settings',

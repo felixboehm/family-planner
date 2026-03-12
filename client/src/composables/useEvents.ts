@@ -4,15 +4,14 @@ import type { FamilyEvent } from '@/types/family'
 import { useFamily } from './useFamily'
 
 const events = ref<Record<string, FamilyEvent>>({})
-let subscribedFamilyId: string | null = null
+let subscribedFamilyPub: string | null = null
 
-function subscribeToEvents(fId: string): void {
-  if (subscribedFamilyId === fId) return
-  subscribedFamilyId = fId
+function subscribeToEvents(fPub: string): void {
+  if (subscribedFamilyPub === fPub) return
+  subscribedFamilyPub = fPub
 
   gun
-    .get('families')
-    .get(fId)
+    .user(fPub)
     .get('events')
     .map()
     .on((data: any, key: string) => {
@@ -56,16 +55,16 @@ function subscribeToEvents(fId: string): void {
 }
 
 export function useEvents() {
-  const { familyId } = useFamily()
+  const { familyPub, familyCert } = useFamily()
 
   watch(
-    familyId,
-    (newId) => {
-      if (newId) {
-        subscribeToEvents(newId)
+    familyPub,
+    (newPub) => {
+      if (newPub) {
+        subscribeToEvents(newPub)
       } else {
         events.value = {}
-        subscribedFamilyId = null
+        subscribedFamilyPub = null
       }
     },
     { immediate: true },
@@ -92,14 +91,14 @@ export function useEvents() {
   }
 
   function addEvent(data: Omit<FamilyEvent, 'id' | 'createdAt'>): string {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+    if (!familyPub.value || !familyCert.value) throw new Error('Keine Familie ausgewaehlt')
 
     const id = `evt-${crypto.randomUUID()}`
     const now = Date.now()
+    const cert = familyCert.value
 
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('events')
       .get(id)
       .put({
@@ -113,13 +112,13 @@ export function useEvents() {
         recurrence: data.recurrence,
         endDate: data.endDate ?? '',
         createdAt: now,
-      } as any)
+      } as any, null, { opt: { cert } } as any)
 
     return id
   }
 
   function updateEvent(id: string, data: Partial<Omit<FamilyEvent, 'id'>>): void {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+    if (!familyPub.value || !familyCert.value) throw new Error('Keine Familie ausgewaehlt')
 
     const putData: any = { ...data }
     if (data.days) {
@@ -129,23 +128,25 @@ export function useEvents() {
       putData.endDate = ''
     }
 
+    const cert = familyCert.value
+
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('events')
       .get(id)
-      .put(putData)
+      .put(putData, null, { opt: { cert } } as any)
   }
 
   function removeEvent(id: string): void {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+    if (!familyPub.value || !familyCert.value) throw new Error('Keine Familie ausgewaehlt')
+
+    const cert = familyCert.value
 
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('events')
       .get(id)
-      .put(null as any)
+      .put(null as any, null, { opt: { cert } } as any)
   }
 
   return {

@@ -4,15 +4,14 @@ import type { SwapRequest } from '@/types/family'
 import { useFamily } from './useFamily'
 
 const requests = ref<Record<string, SwapRequest>>({})
-let subscribedFamilyId: string | null = null
+let subscribedFamilyPub: string | null = null
 
-function subscribeToRequests(fId: string): void {
-  if (subscribedFamilyId === fId) return
-  subscribedFamilyId = fId
+function subscribeToRequests(fPub: string): void {
+  if (subscribedFamilyPub === fPub) return
+  subscribedFamilyPub = fPub
 
   gun
-    .get('families')
-    .get(fId)
+    .user(fPub)
     .get('requests')
     .map()
     .on((data: any, key: string) => {
@@ -41,16 +40,16 @@ function subscribeToRequests(fId: string): void {
 }
 
 export function useRequests() {
-  const { familyId } = useFamily()
+  const { familyPub, familyCert } = useFamily()
 
   watch(
-    familyId,
-    (newId) => {
-      if (newId) {
-        subscribeToRequests(newId)
+    familyPub,
+    (newPub) => {
+      if (newPub) {
+        subscribeToRequests(newPub)
       } else {
         requests.value = {}
-        subscribedFamilyId = null
+        subscribedFamilyPub = null
       }
     },
     { immediate: true },
@@ -67,14 +66,14 @@ export function useRequests() {
   const pendingCount = computed(() => pendingRequests.value.length)
 
   function createRequest(data: Partial<SwapRequest>): string {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+    if (!familyPub.value || !familyCert.value) throw new Error('Keine Familie ausgewaehlt')
 
     const id = `req-${crypto.randomUUID()}`
     const now = Date.now()
+    const cert = familyCert.value
 
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('requests')
       .get(id)
       .put({
@@ -85,31 +84,33 @@ export function useRequests() {
         message: data.message ?? '',
         status: 'pending',
         createdAt: now,
-      } as any)
+      } as any, null, { opt: { cert } } as any)
 
     return id
   }
 
   function acceptRequest(id: string): void {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+    if (!familyPub.value || !familyCert.value) throw new Error('Keine Familie ausgewaehlt')
+
+    const cert = familyCert.value
 
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('requests')
       .get(id)
-      .put({ status: 'accepted' } as any)
+      .put({ status: 'accepted' } as any, null, { opt: { cert } } as any)
   }
 
   function rejectRequest(id: string): void {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+    if (!familyPub.value || !familyCert.value) throw new Error('Keine Familie ausgewaehlt')
+
+    const cert = familyCert.value
 
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('requests')
       .get(id)
-      .put({ status: 'rejected' } as any)
+      .put({ status: 'rejected' } as any, null, { opt: { cert } } as any)
   }
 
   return {

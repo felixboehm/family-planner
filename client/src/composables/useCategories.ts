@@ -5,15 +5,14 @@ import { useFamily } from './useFamily'
 import { defaultCategories } from '@/data/defaultCategories'
 
 const categories = ref<Record<string, Category>>({})
-let subscribedFamilyId: string | null = null
+let subscribedFamilyPub: string | null = null
 
-function subscribeToCategories(fId: string): void {
-  if (subscribedFamilyId === fId) return
-  subscribedFamilyId = fId
+function subscribeToCategories(fPub: string): void {
+  if (subscribedFamilyPub === fPub) return
+  subscribedFamilyPub = fPub
 
   gun
-    .get('families')
-    .get(fId)
+    .user(fPub)
     .get('categories')
     .map()
     .on((data: any, key: string) => {
@@ -42,16 +41,16 @@ function subscribeToCategories(fId: string): void {
 }
 
 export function useCategories() {
-  const { familyId } = useFamily()
+  const { familyPub, familyCert } = useFamily()
 
   watch(
-    familyId,
-    (newId) => {
-      if (newId) {
-        subscribeToCategories(newId)
+    familyPub,
+    (newPub) => {
+      if (newPub) {
+        subscribeToCategories(newPub)
       } else {
         categories.value = {}
-        subscribedFamilyId = null
+        subscribedFamilyPub = null
       }
     },
     { immediate: true },
@@ -74,9 +73,10 @@ export function useCategories() {
   )
 
   function initDefaultCategories(): void {
-    if (!familyId.value) return
+    if (!familyPub.value || !familyCert.value) return
 
-    const catNode = gun.get('families').get(familyId.value).get('categories')
+    const cert = familyCert.value
+    const catNode = gun.user(familyPub.value).get('categories')
 
     for (const cat of defaultCategories) {
       catNode.get(cat.id).once((existing: any) => {
@@ -89,21 +89,21 @@ export function useCategories() {
             visibility: cat.visibility,
             isDefault: cat.isDefault,
             createdAt: cat.createdAt,
-          })
+          } as any, null, { opt: { cert } } as any)
         }
       })
     }
   }
 
   function addCategory(data: Omit<Category, 'id' | 'createdAt' | 'isDefault'>): string {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+    if (!familyPub.value || !familyCert.value) throw new Error('Keine Familie ausgewaehlt')
 
     const id = `cat-${crypto.randomUUID()}`
     const now = Date.now()
+    const cert = familyCert.value
 
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('categories')
       .get(id)
       .put({
@@ -114,34 +114,36 @@ export function useCategories() {
         visibility: data.visibility,
         isDefault: false,
         createdAt: now,
-      })
+      } as any, null, { opt: { cert } } as any)
 
     return id
   }
 
   function updateCategory(id: string, data: Partial<Omit<Category, 'id' | 'isDefault'>>): void {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+    if (!familyPub.value || !familyCert.value) throw new Error('Keine Familie ausgewaehlt')
+
+    const cert = familyCert.value
 
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('categories')
       .get(id)
-      .put(data as any)
+      .put(data as any, null, { opt: { cert } } as any)
   }
 
   function removeCategory(id: string): void {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+    if (!familyPub.value || !familyCert.value) throw new Error('Keine Familie ausgewaehlt')
 
     const cat = categories.value[id]
     if (cat?.isDefault) return // cannot remove default categories
 
+    const cert = familyCert.value
+
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('categories')
       .get(id)
-      .put(null as any)
+      .put(null as any, null, { opt: { cert } } as any)
   }
 
   function getCategoryById(id: string): Category | undefined {

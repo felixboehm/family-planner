@@ -5,16 +5,15 @@ import { useFamily } from './useFamily'
 
 const children = ref<Record<string, Child>>({})
 const careSlots = ref<Record<string, CareSlot>>({})
-let subscribedFamilyId: string | null = null
+let subscribedFamilyPub: string | null = null
 
-function subscribeToChildren(fId: string): void {
-  if (subscribedFamilyId === fId) return
-  subscribedFamilyId = fId
+function subscribeToChildren(fPub: string): void {
+  if (subscribedFamilyPub === fPub) return
+  subscribedFamilyPub = fPub
 
   // Subscribe to children
   gun
-    .get('families')
-    .get(fId)
+    .user(fPub)
     .get('children')
     .map()
     .on((data: any, key: string) => {
@@ -45,8 +44,7 @@ function subscribeToChildren(fId: string): void {
 
         // Subscribe to this child's care slots
         gun
-          .get('families')
-          .get(fId)
+          .user(fPub)
           .get('children')
           .get(key)
           .get('slots')
@@ -91,17 +89,17 @@ function subscribeToChildren(fId: string): void {
 }
 
 export function useChildren() {
-  const { familyId } = useFamily()
+  const { familyPub, familyCert } = useFamily()
 
   watch(
-    familyId,
-    (newId) => {
-      if (newId) {
-        subscribeToChildren(newId)
+    familyPub,
+    (newPub) => {
+      if (newPub) {
+        subscribeToChildren(newPub)
       } else {
         children.value = {}
         careSlots.value = {}
-        subscribedFamilyId = null
+        subscribedFamilyPub = null
       }
     },
     { immediate: true },
@@ -120,55 +118,59 @@ export function useChildren() {
   }
 
   function addChild(name: string, birthDate: string): string {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+    if (!familyPub.value || !familyCert.value) throw new Error('Keine Familie ausgewaehlt')
 
     const id = `child-${crypto.randomUUID()}`
     const now = Date.now()
+    const cert = familyCert.value
 
-    gun.get('families').get(familyId.value).get('children').get(id).put({
+    gun.user(familyPub.value).get('children').get(id).put({
       name,
       birthDate,
       createdAt: now,
-    })
+    } as any, null, { opt: { cert } } as any)
 
     return id
   }
 
   function updateChild(id: string, data: Partial<Omit<Child, 'id'>>): void {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+    if (!familyPub.value || !familyCert.value) throw new Error('Keine Familie ausgewaehlt')
 
-    gun.get('families').get(familyId.value).get('children').get(id).put(data as any)
+    const cert = familyCert.value
+
+    gun.user(familyPub.value).get('children').get(id).put(data as any, null, { opt: { cert } } as any)
   }
 
   function removeChild(id: string): void {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+    if (!familyPub.value || !familyCert.value) throw new Error('Keine Familie ausgewaehlt')
+
+    const cert = familyCert.value
 
     // Remove associated care slots first
     const slots = Object.values(careSlots.value).filter((s) => s.childId === id)
     for (const slot of slots) {
       gun
-        .get('families')
-        .get(familyId.value!)
+        .user(familyPub.value!)
         .get('children')
         .get(id)
         .get('slots')
         .get(slot.id)
-        .put(null as any)
+        .put(null as any, null, { opt: { cert } } as any)
     }
 
     // Remove the child
-    gun.get('families').get(familyId.value).get('children').get(id).put(null as any)
+    gun.user(familyPub.value).get('children').get(id).put(null as any, null, { opt: { cert } } as any)
   }
 
   function addCareSlot(data: Omit<CareSlot, 'id' | 'createdAt'>): string {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+    if (!familyPub.value || !familyCert.value) throw new Error('Keine Familie ausgewaehlt')
 
     const id = `slot-${crypto.randomUUID()}`
     const now = Date.now()
+    const cert = familyCert.value
 
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('children')
       .get(data.childId)
       .get('slots')
@@ -182,13 +184,13 @@ export function useChildren() {
         endTime: data.endTime,
         recurrence: data.recurrence,
         createdAt: now,
-      } as any)
+      } as any, null, { opt: { cert } } as any)
 
     return id
   }
 
   function updateCareSlot(id: string, data: Partial<Omit<CareSlot, 'id'>>): void {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+    if (!familyPub.value || !familyCert.value) throw new Error('Keine Familie ausgewaehlt')
 
     const existing = careSlots.value[id]
     if (!existing) return
@@ -201,30 +203,32 @@ export function useChildren() {
       putData.externalName = ''
     }
 
+    const cert = familyCert.value
+
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('children')
       .get(existing.childId)
       .get('slots')
       .get(id)
-      .put(putData)
+      .put(putData, null, { opt: { cert } } as any)
   }
 
   function removeCareSlot(id: string): void {
-    if (!familyId.value) throw new Error('Keine Familie ausgewaehlt')
+    if (!familyPub.value || !familyCert.value) throw new Error('Keine Familie ausgewaehlt')
 
     const existing = careSlots.value[id]
     if (!existing) return
 
+    const cert = familyCert.value
+
     gun
-      .get('families')
-      .get(familyId.value)
+      .user(familyPub.value)
       .get('children')
       .get(existing.childId)
       .get('slots')
       .get(id)
-      .put(null as any)
+      .put(null as any, null, { opt: { cert } } as any)
   }
 
   return {

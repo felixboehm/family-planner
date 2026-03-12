@@ -55,13 +55,8 @@ function nextMatchingDate(days: number[]): Date {
 }
 
 /** Read a GunDB map node into an array of objects with parsed data */
-function readGunMap<T>(gun: any, path: string[]): Promise<T[]> {
+function readGunMap<T>(node: any): Promise<T[]> {
   return new Promise((resolve) => {
-    let node = gun
-    for (const p of path) {
-      node = node.get(p)
-    }
-
     const items: T[] = []
     let resolved = false
 
@@ -151,30 +146,26 @@ export type FeedScope = 'family' | 'member' | 'child'
  */
 export async function generateFeed(
   gun: any,
-  familyId: string,
+  familyPub: string,
   scope: FeedScope,
   filterId?: string,
 ): Promise<string> {
-  const familyNode = gun.get('families').get(familyId)
+  const familyNode = gun.user(familyPub)
 
   // Read all data in parallel
   const [events, members, categories, children] = await Promise.all([
-    readGunMap<RawEvent>(gun, ['families', familyId, 'events']),
-    readGunMap<RawMember>(gun, ['families', familyId, 'members']),
-    readGunMap<RawCategory>(gun, ['families', familyId, 'categories']),
-    readGunMap<RawChild>(gun, ['families', familyId, 'children']),
+    readGunMap<RawEvent>(familyNode.get('events')),
+    readGunMap<RawMember>(familyNode.get('members')),
+    readGunMap<RawCategory>(familyNode.get('categories')),
+    readGunMap<RawChild>(familyNode.get('children')),
   ])
 
   // Read care slots per child
   const careSlots: RawCareSlot[] = []
   for (const child of children) {
-    const slots = await readGunMap<RawCareSlot>(gun, [
-      'families',
-      familyId,
-      'children',
-      child.id,
-      'slots',
-    ])
+    const slots = await readGunMap<RawCareSlot>(
+      familyNode.get('children').get(child.id).get('slots'),
+    )
     for (const slot of slots) {
       careSlots.push({ ...slot, childId: slot.childId ?? child.id })
     }
@@ -213,7 +204,7 @@ export async function generateFeed(
 
     const lines = [
       'BEGIN:VEVENT',
-      `UID:${evt.id}@family-planner-${familyId}`,
+      `UID:${evt.id}@family-planner-${familyPub}`,
       `DTSTAMP:${dtstamp}`,
       `DTSTART:${formatDateTime(startDate, evt.startTime || '08:00')}`,
       `DTEND:${formatDateTime(startDate, evt.endTime || '09:00')}`,
@@ -244,7 +235,7 @@ export async function generateFeed(
 
     const lines = [
       'BEGIN:VEVENT',
-      `UID:${slot.id}@family-planner-${familyId}`,
+      `UID:${slot.id}@family-planner-${familyPub}`,
       `DTSTAMP:${dtstamp}`,
       `DTSTART:${formatDateTime(startDate, slot.startTime || '08:00')}`,
       `DTEND:${formatDateTime(startDate, slot.endTime || '09:00')}`,

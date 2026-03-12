@@ -8,6 +8,7 @@ import {
   encryptForUser,
   decryptFromUser,
   createFamilyCertificate,
+  encryptForServer,
 } from '@/lib/sea'
 import { useAuth } from './useAuth'
 
@@ -170,6 +171,38 @@ export function useFamily() {
         }, 500)
       })
     })
+
+    // Register server as silent member
+    try {
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8765'
+      const serverRes = await fetch(`${API_BASE}/server-pub`)
+      if (serverRes.ok) {
+        const { pub: serverPub, epub: serverEpub } = await serverRes.json()
+        // Encrypt family keypair for server via Diffie-Hellman
+        const encryptedForServer = await encryptForServer(pair, serverEpub, pair)
+        // Store in family space (using temp auth)
+        const tempGun3 = Gun({ peers: [RELAY_URL], axe: false })
+        await new Promise<void>((resolve) => {
+          tempGun3.user().auth(pair as any, (ack: any) => {
+            if (ack.err) { resolve(); return }
+            tempGun3.user().get('serverFamily').put(encryptedForServer as any)
+            setTimeout(() => { tempGun3.user().leave(); resolve() }, 500)
+          })
+        })
+        // Create certificate for server
+        const serverCert = await createFamilyCertificate(serverPub, pair)
+        // Store server cert (using our own cert now)
+        gun
+          .user(pair.pub)
+          .get('certs')
+          .get(serverPub)
+          .put(serverCert as any, null, { opt: { cert } } as any)
+        // Register family for server push notifications
+        gun.get('server-families').get(serverPub).get(pair.pub).put(true as any)
+      }
+    } catch (e) {
+      console.warn('Failed to register server as family member:', e)
+    }
 
     // Update local state
     familyPub.value = pair.pub

@@ -6,13 +6,13 @@ import {
 } from '../lib/pushService.js'
 
 export interface PushSubscribeBody {
-  familyId: string
+  familyPub: string
   memberId: string
   subscription: PushSubscriptionData
 }
 
 export interface PushUnsubscribeBody {
-  familyId: string
+  familyPub: string
   memberId: string
   endpoint: string
 }
@@ -28,14 +28,14 @@ export function createPushRouter(): Router {
    * Register a push subscription for a family member.
    */
   router.post('/subscribe', (req, res) => {
-    const { familyId, memberId, subscription } = req.body as PushSubscribeBody
+    const { familyPub, memberId, subscription } = req.body as PushSubscribeBody
 
-    if (!familyId || !memberId || !subscription?.endpoint || !subscription?.keys) {
-      res.status(400).json({ error: 'Missing required fields: familyId, memberId, subscription' })
+    if (!familyPub || !memberId || !subscription?.endpoint || !subscription?.keys) {
+      res.status(400).json({ error: 'Missing required fields: familyPub, memberId, subscription' })
       return
     }
 
-    addSubscription(familyId, memberId, subscription)
+    addSubscription(familyPub, memberId, subscription)
     res.json({ ok: true })
   })
 
@@ -44,14 +44,14 @@ export function createPushRouter(): Router {
    * Remove a push subscription for a family member.
    */
   router.delete('/unsubscribe', (req, res) => {
-    const { familyId, memberId, endpoint } = req.body as PushUnsubscribeBody
+    const { familyPub, memberId, endpoint } = req.body as PushUnsubscribeBody
 
-    if (!familyId || !memberId || !endpoint) {
-      res.status(400).json({ error: 'Missing required fields: familyId, memberId, endpoint' })
+    if (!familyPub || !memberId || !endpoint) {
+      res.status(400).json({ error: 'Missing required fields: familyPub, memberId, endpoint' })
       return
     }
 
-    const removed = removeSubscription(familyId, memberId, endpoint)
+    const removed = removeSubscription(familyPub, memberId, endpoint)
     res.json({ ok: true, removed })
   })
 

@@ -65,3 +65,5 @@ export interface Family {
   name: string
   createdAt: number
 }
+
+export type { FamilyKeypair } from '@/lib/sea'

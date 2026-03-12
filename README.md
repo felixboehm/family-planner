@@ -34,6 +34,8 @@ Family-Planner hilft Familien, ihren Alltag fair zu organisieren. Jeder Termin w
 - [Vision & Mission](docs/vision.md)
 - [Tech Stack](docs/techstack.md)
 - [Architektur-Entscheidungen](docs/architecture.md)
+- [Monetarisierung](docs/monetization.md)
+- [Differenzierung](docs/competition.md)
 
 ## Spezifikationen
 
@@ -47,8 +49,6 @@ Family-Planner hilft Familien, ihren Alltag fair zu organisieren. Jeder Termin w
 - [iCal-Feed](specs/ical-feed.md) – Export und Live-Abo
 - [Push-Benachrichtigungen](specs/push-notifications.md) – Web Push bei Planänderungen
 - [KI-Assistent](specs/ai-assistant.md) – Vorschlagsmodus
-- [Monetarisierung](specs/monetization.md) – Free / Family / Premium
-- [Differenzierung](specs/competition.md) – Wettbewerbsvergleich
 
 ## Projektstruktur
 

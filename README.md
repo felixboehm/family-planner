@@ -49,6 +49,7 @@ Family-Planner hilft Familien, ihren Alltag fair zu organisieren. Jeder Termin w
 - [iCal-Feed](specs/ical-feed.md) – Export und Live-Abo
 - [Push-Benachrichtigungen](specs/push-notifications.md) – Web Push bei Planänderungen
 - [KI-Assistent](specs/ai-assistant.md) – Vorschlagsmodus
+- [GunDB Datenmodell](specs/gundb-data-model.md) – SEA-basiertes Sharing, Zertifikate, Einladungsflow
 
 ## Projektstruktur
 

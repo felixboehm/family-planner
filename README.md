@@ -32,6 +32,7 @@ Family-Planner hilft Familien, ihren Alltag fair zu organisieren. Jeder Termin w
 ## Dokumentation
 
 - [Vision & Mission](docs/vision.md)
+- [Tech Stack](docs/techstack.md)
 - [Architektur-Entscheidungen](docs/architecture.md)
 - [Produktkonzept](specs/concept.md)
 

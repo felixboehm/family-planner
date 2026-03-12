@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { useFamily } from '@/composables/useFamily'
@@ -11,6 +11,18 @@ const { familyId } = useFamily()
 const { pendingCount } = useRequests()
 
 const showNavigation = computed(() => isAuthenticated.value && familyId.value !== null)
+
+// Redirect after auth loading resolves
+watch(
+  isLoading,
+  (loading) => {
+    if (!loading && !isAuthenticated.value) {
+      router.push('/login')
+    } else if (!loading && isAuthenticated.value && !familyId.value) {
+      router.push('/onboarding')
+    }
+  },
+)
 
 const navItems = [
   { label: 'Kalender', icon: '\u{1F4C5}', path: '/', badge: false },

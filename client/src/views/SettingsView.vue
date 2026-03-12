@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import IcalSettings from '@/components/IcalSettings.vue'
 
 const router = useRouter()
 </script>
@@ -24,9 +25,13 @@ const router = useRouter()
       </button>
     </div>
 
-    <div class="bg-white rounded-lg shadow p-6 text-center text-gray-500 mt-4">
-      <p class="text-4xl mb-3">&#x2699;&#xFE0F;</p>
-      <p>Weitere Einstellungen folgen.</p>
+    <!-- iCal Export & Live Feed -->
+    <div class="mt-6">
+      <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+        <span>&#x1F4C5;</span>
+        <span>Kalender-Export</span>
+      </h3>
+      <IcalSettings />
     </div>
   </div>
 </template>

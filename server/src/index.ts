@@ -3,6 +3,7 @@ import express from 'express'
 import cors from 'cors'
 import { createServer } from 'http'
 import Gun from 'gun'
+import { createIcalRouter } from './routes/ical'
 
 const app = express()
 const port = Number(process.env.PORT) || 8765
@@ -23,6 +24,9 @@ const gun = Gun({
   file: 'data',
   peers: process.env.GUN_PEERS ? process.env.GUN_PEERS.split(',') : [],
 })
+
+// Mount iCal feed router
+app.use('/ical', createIcalRouter(gun))
 
 server.listen(port, () => {
   console.log(`Family-Planner relay server running on port ${port}`)

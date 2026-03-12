@@ -83,3 +83,55 @@ Mit einem eigenen Relay-Server hat der Betreiber theoretisch Zugang zu den synch
 ## Status
 
 Akzeptiert – ersetzt den öffentlichen Relay-Ansatz aus Konzept v0.4.
+
+---
+
+# Architektur-Entscheidung: Familie als SEA User (User Space)
+
+## Kontext
+
+Im bisherigen Datenmodell liegen Familiendaten unter einem öffentlichen Pfad `families/{uuid}/` im globalen GunDB-Graphen. Jeder, der die UUID kennt, kann alle Daten lesen und schreiben. Es gibt keine Zugriffskontrolle und keine Verschlüsselung. Der Einladungsflow beschränkt sich auf das manuelle Teilen einer UUID.
+
+## Entscheidung
+
+**Familie als SEA User statt öffentlicher Pfad.**
+
+Jede Familie wird als eigener GunDB SEA User modelliert (`const familyPair = await SEA.pair()`). Alle Familiendaten liegen im User-Space unter `gun.user(familyPub)`. Der Zugriff wird über SEA-Mechanismen gesteuert:
+
+- **Lesen:** Nur wer das `familyPair` kennt, kann die Daten im User-Space lesen
+- **Schreiben:** Mitglieder erhalten individuelle Schreibzertifikate via `SEA.certify()`
+- **Verschlüsselung:** Sensible Daten (z.B. Finance) werden zusätzlich mit dem Family-Keypair verschlüsselt
+- **Server-Integration:** Der Relay-Server besitzt ein eigenes SEA-Keypair und wird beim Erstellen der Familie automatisch als stilles Mitglied hinzugefügt
+
+## Konsequenzen
+
+### Keypair-Management
+
+- Das Family-Keypair muss sicher an alle Mitglieder verteilt werden
+- Jeder Nutzer speichert das verschlüsselte Family-Keypair in seinem eigenen User-Space (`gun.user().get('family')`)
+- Verlust des Keypairs = Verlust des Zugangs → Recovery-Mechanismus nötig (über andere Mitglieder)
+
+### Invite-Flow
+
+- Einladung per Code oder QR-Code statt UUID-Sharing
+- Das Family-Keypair wird verschlüsselt über einen temporären öffentlichen Pfad geteilt (`gun.get('invites').get(code)`)
+- Einladungen laufen nach 24h ab und werden gelöscht
+- Nach dem Beitritt erstellt der Ersteller ein Schreibzertifikat für das neue Mitglied
+
+### Server-Integration
+
+- Der Server benötigt ein persistentes SEA-Keypair (`serverIdentity`)
+- Beim Erstellen einer Familie wird der Server-Public-Key automatisch als Mitglied registriert und erhält ein Schreibzertifikat
+- Der Server kann damit die Familiendaten lesen (für iCal, Push, KI) und bei Bedarf schreiben
+- Das Server-Keypair wird beim ersten Start generiert und sicher gespeichert
+
+### Migration
+
+- Alle Composables die auf `gun.get('families').get(id)` zugreifen, müssen auf `gun.user(familyPub)` umgestellt werden
+- Schreiboperationen benötigen Zertifikate als zusätzlichen Parameter
+- Neue Hilfsfunktionen in `client/src/lib/sea.ts` kapseln die SEA-Operationen
+- Detaillierter Migrationsplan: siehe [specs/gundb-data-model.md](../specs/gundb-data-model.md)
+
+## Status
+
+Akzeptiert – ersetzt den öffentlichen Pfad-Ansatz. Siehe [GunDB Datenmodell Spec](../specs/gundb-data-model.md) für die technische Spezifikation.

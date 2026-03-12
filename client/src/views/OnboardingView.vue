@@ -3,10 +3,12 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFamily } from '@/composables/useFamily'
 import { useCategories } from '@/composables/useCategories'
+import { useInvite } from '@/composables/useInvite'
 
 const router = useRouter()
 const { createFamily, addMember } = useFamily()
 const { initDefaultCategories } = useCategories()
+const { redeemInvite } = useInvite()
 
 const step = ref(1)
 const mode = ref<'create' | 'join' | null>(null)
@@ -43,10 +45,7 @@ async function handleFamilyStep(): Promise<void> {
       // Seed default categories for new family
       setTimeout(() => initDefaultCategories(), 500)
     } else if (mode.value === 'join') {
-      // Invite code redemption – implemented in useInvite (PR 3)
-      error.value = 'Einladungscode-Flow wird in Kuerze implementiert'
-      loading.value = false
-      return
+      await redeemInvite(inviteCode.value)
     }
     step.value = 2
   } catch (e: any) {

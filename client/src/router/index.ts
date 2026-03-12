@@ -6,6 +6,7 @@ import RequestsView from '@/views/RequestsView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import CategoriesView from '@/views/CategoriesView.vue'
 import AssistantView from '@/views/AssistantView.vue'
+import FinanceView from '@/views/FinanceView.vue'
 import LoginView from '@/views/LoginView.vue'
 import OnboardingView from '@/views/OnboardingView.vue'
 import { useAuth } from '@/composables/useAuth'
@@ -59,6 +60,11 @@ const router = createRouter({
       path: '/assistant',
       name: 'assistant',
       component: AssistantView,
+    },
+    {
+      path: '/finance',
+      name: 'finance',
+      component: FinanceView,
     },
   ],
 })

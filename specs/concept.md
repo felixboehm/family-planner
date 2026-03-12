@@ -1,14 +1,6 @@
 # Family-Planner – Produktkonzept
 
-**Version 0.4 · März 2026**
-
----
-
-## Vision
-
-Ein kollaborativer Familienplaner, der Betreuung, Haushalt und persönliche Zeit fair und unterstützend organisiert – mit Respekt für das, was jeder braucht, und Raum für das, was jeder sich wünscht.
-
-> *"Bedürfnisse werden geschützt. Wünsche werden ermöglicht."*
+**Version 0.5 · März 2026**
 
 ---
 
@@ -41,25 +33,11 @@ Familienplanung scheitert oft nicht an mangelndem Willen, sondern an fehlender S
 
 ---
 
-## Datenmodell: Profile
-
-**Familie**
-
-- Person A (Felix)
-  - Bedürfnisse 🔵: Erwerbsarbeit Mo–Fr 9–14h, 7h Schlaf
-  - Wünsche 🟡: Sport Mi 18–19:30h, Projektzeit Sa
-
-- Person B (Tina)
-  - Bedürfnisse 🔵: 7h Schlaf, Erholungszeit
-  - Wünsche 🟡: Studium (Vorlesung, Lernen), Yoga Sa
-
-- Kind (Ben, 3J)
-  - Bedürfnisse 🔵: Mittagsschlaf 13–15h, Mahlzeiten, Betreuung
-  - Wünsche 🟡: Spielgruppe, Ausflüge, Vorlesezeit
-
----
-
 ## Kategorien & Einordnung
+
+Die App liefert vordefinierte Standard-Kategorien. Nutzer können jederzeit **eigene Kategorien hinzufügen**, umbenennen oder entfernen. Jede Kategorie wird einem Typ (🔵 Bedürfnis / 🟡 Wunsch) und einer Gewichtung zugeordnet.
+
+### Standard-Kategorien
 
 | Kategorie | Typ | Gewichtung | Beispiele |
 |---|---|---|---|
@@ -72,6 +50,16 @@ Familienplanung scheitert oft nicht an mangelndem Willen, sondern an fehlender S
 | 🎨 Hobby & Kreativzeit | 🟡 Wunsch | Persönliches Wohlbefinden | Musik, Projekte |
 | 👫 Paarzeit | 🟡 Wunsch | Beziehungspflege | Date Night, gemeinsame Zeit |
 
+### Eigene Kategorien
+
+Nutzer können eigene Kategorien erstellen mit:
+- Name und Emoji/Icon
+- Typ: Bedürfnis 🔵 oder Wunsch 🟡
+- Gewichtung: Familienbeitrag, Persönlich, oder eigene Bezeichnung
+- Sichtbarkeit: nur für sich oder für die ganze Familie
+
+Eigene Kategorien werden in der Familienbilanz und dem Fairness-Score gleichwertig berücksichtigt.
+
 ---
 
 ## Kernfunktionen
@@ -80,7 +68,7 @@ Familienplanung scheitert oft nicht an mangelndem Willen, sondern an fehlender S
 
 Jede Person trägt eigene **wiederkehrende Termine** ein und klassifiziert sie:
 
-- Titel, Kategorie, Farbe
+- Titel, Kategorie (Standard oder eigene), Farbe
 - **Typ: Bedürfnis 🔵 oder Wunsch 🟡**
 - Wochentag(e) + Uhrzeit
 - Wiederholungsregel: täglich / wöchentlich / alle 2 Wochen
@@ -90,7 +78,7 @@ Jede Person trägt eigene **wiederkehrende Termine** ein und klassifiziert sie:
 
 ### 2. Kind-Profil & Betreuungsplanung
 
-Das Kind hat ein eigenes Profil mit Tagesrhythmus und Terminen.
+Jedes Kind hat ein eigenes Profil mit Tagesrhythmus und Terminen.
 
 **Betreuungsslots:**
 - Zuständig: Person A, B, Beide, Extern (Kita, Tagesmutter, Großeltern)
@@ -144,31 +132,44 @@ Pro Person – wöchentlich:
 
 ---
 
-### 7. iCal-Export
+### 7. iCal-Feed
 
-Jede Person kann ihren persönlichen Kalender als `.ics`-Datei exportieren oder als Live-Feed abonnieren:
+Jede Person kann ihren persönlichen Kalender als `.ics`-Datei exportieren oder als **Live-Feed abonnieren**:
 
 - **Einzelperson:** Nur eigene Termine + zugewiesene Betreuungsslots
 - **Familie:** Alle Termine aller Mitglieder zusammen
 - **Kind:** Tagesstruktur + Betreuungszeiten
 
-Der iCal-Feed wird direkt aus GunDB im Browser generiert – kein Server beteiligt. Kompatibel mit Google Calendar, Apple Calendar, Outlook und allen standard-konformen Kalenderanwendungen.
+**Einmal-Export:** Wird direkt im Browser aus GunDB generiert – kein Server beteiligt.
+
+**Live-Feed (Abo):** Wird über den Relay-Server bereitgestellt. Der Server liest die Familiendaten aus GunDB und generiert den `.ics`-Feed on-the-fly. Kalender-Apps (Google Calendar, Apple Calendar, Outlook) pollen diesen Endpunkt periodisch.
 
 ---
 
-### 8. KI-Assistent ✨
+### 8. Push-Benachrichtigungen
 
-Ein sanfter Vorschlagsmodus über eine schlanke Text-API:
+Web Push Notifications bei:
+- Planänderungen durch den Partner
+- Offenen Tausch-Requests
+- Betreuungslücken
 
-**Funktionsweise:** Der Client serialisiert den aktuellen Familienplan aus GunDB als Klartext und schickt ihn an einen minimalen API-Endpunkt. Der Server leitet die Anfrage an das KI-Modell weiter und gibt Text zurück. Keine Datenspeicherung serverseitig – der Kontext lebt ausschließlich in GunDB auf den Geräten der Familie.
+Technisch über die Web Push API: Der Relay-Server hält VAPID-Keys und sendet Push-Messages an registrierte Service Worker. GunDB-Listener auf dem Server triggern Notifications bei relevanten Datenänderungen.
+
+---
+
+### 9. KI-Assistent
+
+Ein sanfter Vorschlagsmodus als Agent auf dem Relay-Server:
+
+**Funktionsweise:** Der Client serialisiert den aktuellen Familienplan aus GunDB als Klartext und schickt ihn an den Relay-Server. Der KI-Agent analysiert den Plan und gibt Vorschläge als Text zurück. Keine Datenspeicherung serverseitig – der Kontext lebt ausschließlich in GunDB auf den Geräten der Familie.
 
 **Beispiel-Interaktionen:**
 
-> *"Tinas Wunsch Yoga Sa 9–10h ist diese Woche noch nicht gedeckt. Felix hat Sa 8–10h frei. Soll ich einen Tausch vorschlagen?"*
+> *"Person Bs Wunsch Yoga Sa 9–10h ist diese Woche noch nicht gedeckt. Person A hat Sa 8–10h frei. Soll ich einen Tausch vorschlagen?"*
 
-> *"Diese Woche trägt Felix 12h mehr Familienbeitrag als Tina. Hier sind drei Möglichkeiten das anzugleichen."*
+> *"Diese Woche trägt Person A 12h mehr Familienbeitrag als Person B. Hier sind drei Möglichkeiten das anzugleichen."*
 
-> *"Ben hatte diese Woche 3h weniger Elternzeit als üblich. Möchtet ihr das Wochenende anders planen?"*
+> *"Das Kind hatte diese Woche 3h weniger Elternzeit als üblich. Möchtet ihr das Wochenende anders planen?"*
 
 Nur Vorschläge, keine automatischen Änderungen. Beide müssen Tausch-Requests bestätigen.
 
@@ -189,11 +190,11 @@ Nur Vorschläge, keine automatischen Änderungen. Beide müssen Tausch-Requests 
 | Schicht | Technologie | Begründung |
 |---|---|---|
 | Datenbank + State | GunDB | P2P, kein eigenes Backend, Echtzeit-Sync, reaktiv als einzige State-Quelle |
-| Sync | GunDB Public Relay | Kostenlos, dezentral, kein Server zu betreiben |
+| Sync | Eigener GunDB Relay (TypeScript) | Volle Kontrolle, erweiterbar um API-Endpunkte |
 | Verschlüsselung | GunDB SEA | Ende-zu-Ende für alle Familiendaten |
 | Offline | GunDB lokal (IndexedDB) | Funktioniert ohne Verbindung, sync bei Reconnect |
 
-**Datenprinzip:** GunDB ist die einzige State-Quelle – kein separater Store (kein Pinia, kein Vuex). Vue-Komponenten subscriben direkt auf GunDB-Nodes. Alle Familiendaten leben im Browser und werden direkt zwischen den Geräten der Familie synchronisiert. Kein zentraler Server sieht jemals die Inhalte.
+**Datenprinzip:** GunDB ist die einzige State-Quelle – kein separater Store (kein Pinia, kein Vuex). Vue-Komponenten subscriben direkt auf GunDB-Nodes. Alle Familiendaten leben im Browser und werden direkt zwischen den Geräten der Familie synchronisiert.
 
 **GunDB-Datenstruktur (vereinfacht):**
 
@@ -201,16 +202,20 @@ Nur Vorschläge, keine automatischen Änderungen. Beide müssen Tausch-Requests 
 - `family/{id}/events/{eventId}` → Termine mit Typ, Kategorie, Wiederholung
 - `family/{id}/children/{childId}/slots/{slotId}` → Betreuungsslots
 - `family/{id}/requests/{requestId}` → Tausch-Requests + Status
+- `family/{id}/categories/{categoryId}` → Eigene Kategorien
 
-### KI-Assistent (Server)
+### Relay-Server (TypeScript)
 
-| Schicht | Technologie | Begründung |
+Ein einzelner TypeScript-Server vereint alle serverseitigen Funktionen:
+
+| Funktion | Endpunkt / Mechanismus | Beschreibung |
 |---|---|---|
-| Server | Node.js + Express (minimal) | Einziger Serverteil der App |
-| API | POST /assist – Text rein, Text raus | Kein Zustand, kein Speicher |
-| Modell | Claude API | Kontextverständnis für Familienszenarien |
+| GunDB Relay | WebSocket | Sync-Relay für alle verbundenen Clients |
+| iCal Feed | `GET /ical/:familyId/:scope` | Generiert .ics on-the-fly aus GunDB-Daten |
+| Push Service | Web Push API | VAPID-basiert, getriggert durch GunDB-Listener |
+| KI-Assistent | `POST /assist` | Leitet Kontext an Claude API, gibt Text zurück |
 
-Der KI-Server ist zustandslos. Jede Anfrage enthält den vollständigen Kontext als Text und erhält eine Antwort. Kein Session-Handling, keine Logs.
+**Architektur-Prinzip:** Der Server ist ein erweiterter GunDB-Relay. Er hat lesenden Zugang zu den synchronisierten Daten, speichert aber selbst keinen Zustand. Alle Daten fließen durch GunDB – der Server subscribed auf relevante Nodes und reagiert darauf (Push-Trigger, iCal-Generierung).
 
 ---
 
@@ -224,50 +229,11 @@ Der KI-Server ist zustandslos. Jede Anfrage enthält den vollständigen Kontext 
 
 ---
 
-## Roadmap
-
-### MVP (Monat 1–2)
-- Vue.js + Tailwind + GunDB als State
-- Persönliche Termine mit 🔵/🟡-Klassifikation
-- Kind-Profil mit Betreuungszuweisung
-- Lücken- und Konflikterkennung
-- Fairness-Score
-
-### v1.0 (Monat 3–4)
-- Tausch-Request zwischen Partnern
-- iCal-Export (Einzel + Familie)
-- Finanzmodul
-- Verlaufsansicht 4 Wochen
-
-### v1.5 (Monat 5–6)
-- PWA – installierbar auf iOS/Android
-- Push-Benachrichtigungen bei Planänderung
-- GunDB SEA Verschlüsselung aktiviert
-
-### v2.0 (Monat 7–12)
-- KI-Assistent (Text-API)
-- Mehrere Kinder
-- Extern-Zugang (Tagesmutter, Großeltern)
-- iCal Live-Feed-Abo
-
----
-
 ## Differenzierung
 
 | Wettbewerb | Schwäche | Family-Planner-Vorteil |
 |---|---|---|
 | Google Calendar | Keine Fairness-Analyse | Bedürfnis/Wunsch-Ebene, Familienbilanz |
-| Cozi / FamCal | Nur Termine, kein P2P | GunDB: kein Server, volle Datenkontrolle |
+| Cozi / FamCal | Nur Termine, kein P2P | GunDB: eigener Relay, volle Datenkontrolle |
 | Spreadsheets | Statisch, kein Sync | Kollaborativ, live, offline-fähig |
 | Andere Apps | Zentraler Server, Datenschutzrisiko | Dezentral, Ende-zu-Ende verschlüsselt |
-
----
-
-## Kernbotschaft
-
-**Family-Planner schützt was jeder braucht – und ermöglicht was jeder sich wünscht. Dezentral, kollaborativ, ohne Server.**
-
----
-
-*Konzept v0.4 · Tech Stack: Vue.js · Tailwind · GunDB · iCal · KI-Assistent*
-*Entwickelt auf Basis eines realen Familienmodells · Felix & Tina, Ben (3J)*

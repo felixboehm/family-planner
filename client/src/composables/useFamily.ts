@@ -138,6 +138,23 @@ export function useFamily() {
       throw new Error('Keine Familie ausgewaehlt')
     }
 
+    // Check if user already has a member profile
+    const existingMemberId = await new Promise<string | null>((resolve) => {
+      gun.user().get('memberId').once((data: any) => {
+        resolve(data && typeof data === 'string' ? data : null)
+      })
+    })
+
+    if (existingMemberId) {
+      // Update existing member instead of creating duplicate
+      gun.get('families').get(familyId.value).get('members').get(existingMemberId).put({
+        name,
+        color,
+        createdAt: Date.now(),
+      })
+      return existingMemberId
+    }
+
     const memberId = crypto.randomUUID()
     const now = Date.now()
 

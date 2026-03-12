@@ -4,6 +4,9 @@ import cors from 'cors'
 import { createServer } from 'http'
 import Gun from 'gun'
 import { createIcalRouter } from './routes/ical'
+import { initVapid } from './lib/pushService.js'
+import { setupGunListeners } from './lib/gunListeners.js'
+import { createPushRouter } from './routes/push.js'
 
 const app = express()
 const port = Number(process.env.PORT) || 8765
@@ -16,6 +19,12 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
+// Initialize VAPID for web-push
+initVapid()
+
+// Mount push notification routes
+app.use('/push', createPushRouter())
+
 const server = createServer(app)
 
 // Attach GunDB relay to the HTTP server
@@ -27,6 +36,9 @@ const gun = Gun({
 
 // Mount iCal feed router
 app.use('/ical', createIcalRouter(gun))
+
+// Set up GunDB listeners for push notifications
+setupGunListeners(gun)
 
 server.listen(port, () => {
   console.log(`Family-Planner relay server running on port ${port}`)

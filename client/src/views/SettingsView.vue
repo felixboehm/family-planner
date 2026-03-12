@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import IcalSettings from '@/components/IcalSettings.vue'
+import NotificationSettings from '@/components/NotificationSettings.vue'
 
 const router = useRouter()
 </script>
@@ -23,6 +24,11 @@ const router = useRouter()
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
       </button>
+    </div>
+
+    <!-- Push notification settings -->
+    <div class="mt-4">
+      <NotificationSettings />
     </div>
 
     <!-- iCal Export & Live Feed -->

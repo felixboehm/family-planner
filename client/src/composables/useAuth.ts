@@ -9,7 +9,7 @@ interface GunUser {
 const user = ref<GunUser | null>(null)
 const isLoading = ref(true)
 
-const gunUser = gun.user().recall({ sessionStorage: true })
+const gunUser = gun.user().recall({ sessionStorage: false })
 
 // Track auth state changes
 gun.on('auth', () => {

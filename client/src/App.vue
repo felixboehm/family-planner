@@ -19,7 +19,12 @@ watch(
     if (!loading && !isAuthenticated.value) {
       router.push('/login')
     } else if (!loading && isAuthenticated.value && !familyId.value) {
-      router.push('/onboarding')
+      // Wait for familyId to load from GunDB before redirecting to onboarding
+      setTimeout(() => {
+        if (!familyId.value) {
+          router.push('/onboarding')
+        }
+      }, 1500)
     }
   },
 )

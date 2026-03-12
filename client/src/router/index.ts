@@ -93,10 +93,8 @@ router.beforeEach((to, _from, next) => {
     return
   }
 
-  if (!familyId.value && to.name !== 'onboarding') {
-    next({ name: 'onboarding' })
-    return
-  }
+  // Don't block navigation to onboarding, but don't force it here either.
+  // The App.vue watcher handles the delayed redirect after familyId has time to load.
 
   if (to.name === 'login') {
     next({ name: 'calendar' })

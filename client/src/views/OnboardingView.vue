@@ -5,7 +5,7 @@ import { useFamily } from '@/composables/useFamily'
 import { useCategories } from '@/composables/useCategories'
 
 const router = useRouter()
-const { createFamily, joinFamily, addMember } = useFamily()
+const { createFamily, addMember } = useFamily()
 const { initDefaultCategories } = useCategories()
 
 const step = ref(1)
@@ -13,7 +13,7 @@ const mode = ref<'create' | 'join' | null>(null)
 
 // Step 1 fields
 const familyName = ref('')
-const joinId = ref('')
+const inviteCode = ref('')
 
 // Step 2 fields
 const memberName = ref('')
@@ -43,7 +43,10 @@ async function handleFamilyStep(): Promise<void> {
       // Seed default categories for new family
       setTimeout(() => initDefaultCategories(), 500)
     } else if (mode.value === 'join') {
-      await joinFamily(joinId.value)
+      // Invite code redemption – implemented in useInvite (PR 3)
+      error.value = 'Einladungscode-Flow wird in Kuerze implementiert'
+      loading.value = false
+      return
     }
     step.value = 2
   } catch (e: any) {
@@ -154,13 +157,14 @@ async function handleProfileStep(): Promise<void> {
           <!-- Join family form -->
           <form v-else-if="mode === 'join'" @submit.prevent="handleFamilyStep" class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Familien-ID</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Einladungscode</label>
               <input
-                v-model="joinId"
+                v-model="inviteCode"
                 type="text"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Familien-ID eingeben"
+                maxlength="6"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase tracking-widest text-center font-mono"
+                placeholder="ABC123"
               />
             </div>
 
@@ -178,7 +182,7 @@ async function handleProfileStep(): Promise<void> {
               </button>
               <button
                 type="submit"
-                :disabled="loading || !joinId"
+                :disabled="loading || !inviteCode"
                 class="flex-1 bg-blue-500 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {{ loading ? 'Laden...' : 'Beitreten' }}

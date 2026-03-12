@@ -1,7 +1,14 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuth } from '@/composables/useAuth'
+import { useFamily } from '@/composables/useFamily'
 
 const router = useRouter()
+const { isAuthenticated, isLoading } = useAuth()
+const { familyId } = useFamily()
+
+const showNavigation = computed(() => isAuthenticated.value && familyId.value !== null)
 
 const navItems = [
   { label: 'Kalender', icon: '\u{1F4C5}', path: '/' },
@@ -12,9 +19,22 @@ const navItems = [
 </script>
 
 <template>
-  <div class="flex flex-col h-screen bg-gray-50">
+  <!-- Loading state -->
+  <div v-if="isLoading" class="flex items-center justify-center h-screen bg-gray-50">
+    <div class="text-center">
+      <div
+        class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"
+      ></div>
+      <p class="text-gray-500 text-sm mt-3">Laden...</p>
+    </div>
+  </div>
+
+  <div v-else class="flex flex-col h-screen bg-gray-50">
     <!-- Header -->
-    <header class="bg-blue-500 text-white px-4 py-3 shadow-md flex-shrink-0">
+    <header
+      v-if="showNavigation"
+      class="bg-blue-500 text-white px-4 py-3 shadow-md flex-shrink-0"
+    >
       <h1 class="text-lg font-semibold text-center">Family-Planner</h1>
     </header>
 
@@ -24,7 +44,10 @@ const navItems = [
     </main>
 
     <!-- Bottom Navigation -->
-    <nav class="bg-white border-t border-gray-200 flex-shrink-0 safe-area-bottom">
+    <nav
+      v-if="showNavigation"
+      class="bg-white border-t border-gray-200 flex-shrink-0 safe-area-bottom"
+    >
       <div class="flex justify-around">
         <button
           v-for="item in navItems"

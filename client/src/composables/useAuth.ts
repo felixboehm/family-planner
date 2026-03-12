@@ -6,26 +6,31 @@ interface GunUser {
   pub: string
 }
 
+const SESSION_KEY = 'fp_session'
+
 const user = ref<GunUser | null>(null)
 const isLoading = ref(true)
 
-const gunUser = gun.user().recall({ sessionStorage: false })
-
-// Track auth state changes
-gun.on('auth', () => {
-  const is = gun.user().is as GunUser | undefined
-  user.value = is ?? null
-  isLoading.value = false
-})
-
-// Resolve initial loading state if no session is restored
-setTimeout(() => {
-  if (isLoading.value) {
-    const is = gun.user().is as GunUser | undefined
-    user.value = is ?? null
+// Try to restore session from localStorage
+const saved = localStorage.getItem(SESSION_KEY)
+if (saved) {
+  try {
+    const { alias, password } = JSON.parse(saved)
+    gun.user().auth(alias, password, (ack: any) => {
+      if (ack.err) {
+        localStorage.removeItem(SESSION_KEY)
+      }
+      const is = gun.user().is as GunUser | undefined
+      user.value = is ?? null
+      isLoading.value = false
+    })
+  } catch {
+    localStorage.removeItem(SESSION_KEY)
     isLoading.value = false
   }
-}, 500)
+} else {
+  isLoading.value = false
+}
 
 export function useAuth() {
   const isAuthenticated = computed(() => user.value !== null)
@@ -37,7 +42,6 @@ export function useAuth() {
           reject(new Error(ack.err))
           return
         }
-        // Auto sign-in after registration
         signIn(alias, password).then(resolve).catch(reject)
       })
     })
@@ -52,6 +56,8 @@ export function useAuth() {
         }
         const is = gun.user().is as GunUser | undefined
         user.value = is ?? null
+        // Persist session
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ alias, password }))
         resolve()
       })
     })
@@ -60,6 +66,7 @@ export function useAuth() {
   function signOut(): void {
     gun.user().leave()
     user.value = null
+    localStorage.removeItem(SESSION_KEY)
   }
 
   return {

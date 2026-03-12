@@ -3,6 +3,7 @@ import express from 'express'
 import cors from 'cors'
 import { createServer } from 'http'
 import Gun from 'gun'
+import { createAssistRouter } from './routes/assist.js'
 
 const app = express()
 const port = Number(process.env.PORT) || 8765
@@ -14,6 +15,9 @@ app.use(express.json())
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
+
+// AI Assistant route
+app.use(createAssistRouter())
 
 const server = createServer(app)
 
